@@ -1,0 +1,57 @@
+# ─── Dependencies ───────────────────────────────────────────
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ─── Environment / Secrets ──────────────────────────────────
+.env
+.env.*
+!.env.example
+*.local
+
+# ─── Expo / React Native ────────────────────────────────────
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/web-build/
+apps/mobile/expo-env.d.ts
+apps/mobile/.metro-health-check*
+
+# ─── Native build artifacts ─────────────────────────────────
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+/ios
+/android
+
+# ─── Python / Backend ───────────────────────────────────────
+backend/.venv/
+backend/venv/
+backend/*.db
+backend/*.sqlite3
+*.log
+
+# ─── Docker ─────────────────────────────────────────────────
+# (keep docker-compose files, ignore local overrides)
+docker-compose.override.yml
+
+# ─── IDE / OS ───────────────────────────────────────────────
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+*.tsbuildinfo
+
+# ─── Misc ───────────────────────────────────────────────────
+npm-debug.*
+yarn-debug.*
+yarn-error.*
