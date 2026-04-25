@@ -22,7 +22,8 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim().toLowerCase(), password);
-      router.replace('/(tabs)');
+      // Return to add tab so user lands on the Add/Verify choice screen
+      router.replace('/(tabs)/add');
     } catch (e: any) {
       const msg = e?.response?.data?.detail ?? 'Login failed. Check your credentials.';
       Alert.alert('Login Failed', msg);

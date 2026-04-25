@@ -1,6 +1,6 @@
 import '../global.css';
 import { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -10,19 +10,18 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import { TitanOne_400Regular } from '@expo-google-fonts/titan-one';
 import * as SplashScreen from 'expo-splash-screen';
-import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { useAuthStore } from '../src/store/authStore';
 import { usersApi } from '../src/api/users';
 
 SplashScreen.preventAutoHideAsync();
 
-function AuthGate({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const segments = useSegments();
-  const { isAuthenticated, setUser } = useAuthStore();
-  const [checked, setChecked] = useState(false);
+/** Silently restore auth session if a token exists — no redirect on failure */
+function AuthRestorer({ children }: { children: React.ReactNode }) {
+  const { setUser } = useAuthStore();
 
   useEffect(() => {
     (async () => {
@@ -36,19 +35,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           setUser(data);
         }
       } catch {}
-      setChecked(true);
     })();
   }, []);
-
-  useEffect(() => {
-    if (!checked) return;
-    const inAuth = segments[0] === '(auth)';
-    const inOnboarding = segments[0] === 'onboarding';
-    const inSplash = segments[0] === 'index' || segments.length === 0;
-    if (!isAuthenticated && !inAuth && !inOnboarding && !inSplash) {
-      router.replace('/(auth)/login');
-    }
-  }, [checked, isAuthenticated, segments]);
 
   return <>{children}</>;
 }
@@ -59,6 +47,7 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    TitanOne_400Regular,
   });
 
   useEffect(() => {
@@ -70,7 +59,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView className="flex-1">
       <SafeAreaProvider>
-        <AuthGate>
+        <AuthRestorer>
           <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
@@ -80,7 +69,7 @@ export default function RootLayout() {
             <Stack.Screen name="search" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
           </Stack>
-        </AuthGate>
+        </AuthRestorer>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

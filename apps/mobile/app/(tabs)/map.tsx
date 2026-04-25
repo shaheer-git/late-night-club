@@ -1,28 +1,51 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  TextInput, ScrollView, FlatList, Dimensions, Image,
+} from 'react-native';
 import MapView, { Marker, Polyline, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocation } from '../../src/hooks/useLocation';
 import { usePlaces } from '../../src/hooks/usePlaces';
 import { usePlacesStore } from '../../src/store/placesStore';
 import { useMapStore } from '../../src/store/mapStore';
 import CustomMarker from '../../src/components/map/CustomMarker';
-import StatusBadge from '../../src/components/place/StatusBadge';
 import { formatDistance, formatDuration } from '../../src/utils/formatDistance';
 import { getRoute } from '../../src/utils/routing';
+import { timeAgo } from '../../src/utils/formatTime';
+import { DUMMY_PLACES } from '../../src/data/dummyPlaces';
 import { Place } from '../../src/types';
 
 const { height } = Dimensions.get('window');
 
-export default function MapScreen() {
+const FILTER_CHIPS = [
+  { label: 'Cafe',              value: 'cafe' },
+  { label: 'Recently verified', value: 'recent' },
+  { label: 'Road Side Shop',    value: 'roadside' },
+  { label: 'Nearby',            value: 'nearby' },
+  { label: 'Food',              value: 'food' },
+];
+
+// Drawer has two heights: collapsed (search + chips) and expanded (full list)
+type DrawerState = 'collapsed' | 'expanded';
+
+export default function SearchScreen() {
   const router = useRouter();
   const { lat, lng } = useLocation();
-  const { places, fetchNearby } = usePlaces();
+  const { places: apiPlaces, fetchNearby } = usePlaces();
   const { selectedPlace, setSelectedPlace } = usePlacesStore();
   const { route, routeDistance, routeDuration, setRoute, clearRoute } = useMapStore();
   const mapRef = useRef<MapView>(null);
+  const searchRef = useRef<TextInput>(null);
+
+  const places = apiPlaces.length > 0 ? apiPlaces : DUMMY_PLACES;
+
+  const [drawer, setDrawer] = useState<DrawerState>('collapsed');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (lat && lng) fetchNearby();
@@ -37,43 +60,58 @@ export default function MapScreen() {
       latitudeDelta: 0.02,
       longitudeDelta: 0.02,
     }, 400);
+    setDrawer('collapsed');
+    searchRef.current?.blur();
   };
 
-  const handleDirections = async () => {
-    if (!selectedPlace || !lat || !lng) return;
-    const r = await getRoute(lat, lng, selectedPlace.lat, selectedPlace.lng);
+  const handleDirections = async (place: Place) => {
+    if (!lat || !lng) return;
+    const r = await getRoute(lat, lng, place.lat, place.lng);
     if (r) setRoute(r.coordinates, r.distance, r.duration);
   };
 
+  const filteredPlaces = places.filter(p => {
+    const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = !activeFilter || p.category === activeFilter ||
+      (activeFilter === 'recent' && p.last_verified_at) ||
+      (activeFilter === 'nearby' && (p.distance ?? 9999) < 1500);
+    return matchesSearch && matchesFilter;
+  });
+
   return (
-    <View className="flex-1 bg-map-bg">
+    <View style={styles.screen}>
       <StatusBar style="light" />
 
-      {/* Map */}
+      {/* ── Full-screen Map ── */}
       <MapView
         ref={mapRef}
-        style={{ flex: 1 }}
+        style={StyleSheet.absoluteFillObject}
         provider={PROVIDER_DEFAULT}
+        customMapStyle={DARK_MAP_STYLE}
         initialRegion={{
-          latitude: lat ?? 12.9716,
-          longitude: lng ?? 77.5946,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
+          latitude: lat ?? 12.9352,
+          longitude: lng ?? 77.6245,
+          latitudeDelta: 0.04,
+          longitudeDelta: 0.04,
         }}
         showsUserLocation
         showsMyLocationButton={false}
+        onPress={() => {
+          setSelectedPlace(null);
+          searchRef.current?.blur();
+        }}
       >
         <UrlTile
           urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           maximumZ={19}
           flipY={false}
         />
-
         {places.map(place => (
           <Marker
             key={place.id}
             coordinate={{ latitude: place.lat, longitude: place.lng }}
             onPress={() => handleMarkerPress(place)}
+            tracksViewChanges={false}
           >
             <CustomMarker
               status={place.status}
@@ -82,68 +120,289 @@ export default function MapScreen() {
             />
           </Marker>
         ))}
-
         {route && (
-          <Polyline
-            coordinates={route}
-            strokeColor="#7E3BED"
-            strokeWidth={4}
-          />
+          <Polyline coordinates={route} strokeColor="#B289F4" strokeWidth={3} />
         )}
       </MapView>
 
-      {/* Route banner */}
+      {/* ── Route banner ── */}
       {route && routeDistance != null && (
-        <SafeAreaView className="absolute top-0 left-0 right-0" edges={['top']}>
-          <View className="mx-4 mt-2 bg-dark/90 rounded-xl px-4 py-3 flex-row items-center justify-between">
-            <Text className="font-semibold text-white text-[15px]">
+        <SafeAreaView style={styles.routeSafe} edges={['top']}>
+          <View style={styles.routeBanner}>
+            <Text style={styles.routeText}>
               {formatDistance(routeDistance)} · {formatDuration(routeDuration ?? 0)}
             </Text>
             <TouchableOpacity onPress={clearRoute}>
-              <Text className="text-lime font-medium text-[14px]">Clear</Text>
+              <Text style={styles.routeClear}>Clear</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
       )}
 
-      {/* Bottom sheet mini */}
-      {selectedPlace && (
-        <View className="absolute bottom-[120px] left-4 right-4 bg-dark rounded-xl p-4 gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="font-semibold text-white text-[18px] flex-1" numberOfLines={1}>
-              {selectedPlace.name}
-            </Text>
-            <StatusBadge status={selectedPlace.status} size="sm" />
-          </View>
+      {/* ── Bottom Drawer ──
+          Figma: #2C2C2C, borderRadius 38, left 5, right 5, bottom 66
+          Collapsed: search + chips only
+          Expanded: search + chips + full scrollable list */}
+      <View style={[
+        styles.drawer,
+        drawer === 'expanded' && styles.drawerExpanded,
+      ]}>
+        {/* Drag handle */}
+        <TouchableOpacity
+          style={styles.handleWrap}
+          onPress={() => setDrawer(d => d === 'collapsed' ? 'expanded' : 'collapsed')}
+        >
+          <View style={styles.handle} />
+        </TouchableOpacity>
 
-          {selectedPlace.address && (
-            <Text className="font-regular text-[13px] text-white/60" numberOfLines={1}>
-              {selectedPlace.address}
-            </Text>
-          )}
-
-          <View className="flex-row gap-3">
-            <TouchableOpacity
-              className="flex-1 h-10 bg-lime rounded-lg items-center justify-center"
-              onPress={handleDirections}
-            >
-              <Text className="font-semibold text-[14px] text-dark">Directions</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="flex-1 h-10 bg-white/10 rounded-lg items-center justify-center"
-              onPress={() => router.push(`/place/${selectedPlace.id}`)}
-            >
-              <Text className="font-semibold text-[14px] text-white">View Details</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="w-10 h-10 bg-white/10 rounded-lg items-center justify-center"
-              onPress={() => setSelectedPlace(null)}
-            >
-              <Text className="text-white text-lg">✕</Text>
-            </TouchableOpacity>
+        {/* Search row */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search-outline" size={18} color="rgba(255,255,255,0.5)" />
+            <TextInput
+              ref={searchRef}
+              style={styles.searchText}
+              placeholder="Nearby open shop's..."
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onFocus={() => setDrawer('expanded')}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close" size={16} color="rgba(255,255,255,0.5)" />
+              </TouchableOpacity>
+            )}
           </View>
+          {/* Filter icon button */}
+          <TouchableOpacity style={styles.filterBtn}>
+            <Ionicons name="options-outline" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
-      )}
+
+        {/* Filter chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsRow}
+        >
+          {FILTER_CHIPS.map(chip => {
+            const active = activeFilter === chip.value;
+            return (
+              <TouchableOpacity
+                key={chip.value}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => setActiveFilter(active ? null : chip.value)}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                  {chip.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Expanded: scrollable place list */}
+        {drawer === 'expanded' && (
+          <FlatList
+            data={filteredPlaces}
+            keyExtractor={p => p.id}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+            renderItem={({ item }) => (
+              <SearchPlaceCard
+                place={item}
+                onPress={() => {
+                  handleMarkerPress(item);
+                  router.push(`/place/${item.id}`);
+                }}
+                onDirections={() => handleDirections(item)}
+              />
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyText}>No places found</Text>
+              </View>
+            }
+          />
+        )}
+      </View>
     </View>
   );
 }
+
+// ── Search result card (same Figma spec as home card) ────────────────────────
+function SearchPlaceCard({
+  place,
+  onPress,
+  onDirections,
+}: {
+  place: Place;
+  onPress: () => void;
+  onDirections: () => void;
+}) {
+  const isOpen = place.status === 'open';
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
+      <View style={styles.cardImg}>
+        {place.image_urls?.[0] ? (
+          <Image source={{ uri: place.image_urls[0] }} style={styles.cardImgFill} resizeMode="cover" />
+        ) : (
+          <View style={styles.cardImgPlaceholder}>
+            <Ionicons name="storefront-outline" size={22} color="rgba(44,44,44,0.25)" />
+          </View>
+        )}
+      </View>
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardName} numberOfLines={1}>{place.name}</Text>
+        <View style={styles.cardMeta}>
+          <View style={[styles.statusDot, { backgroundColor: isOpen ? '#22C55E' : '#EF4444' }]} />
+          <Text style={[styles.statusText, { color: isOpen ? '#22C55E' : '#EF4444' }]}>
+            {isOpen ? 'Now Open' : 'Closed'}
+          </Text>
+          {place.distance != null && (
+            <Text style={styles.distText}> · {formatDistance(place.distance)}</Text>
+          )}
+        </View>
+        {place.last_verified_at && (
+          <View style={styles.cardVerified}>
+            <Ionicons name="checkmark-circle" size={12} color="#2C2C2C" />
+            <Text style={styles.verifiedText}>Verified {timeAgo(place.last_verified_at)}</Text>
+          </View>
+        )}
+      </View>
+      <TouchableOpacity style={styles.navBtn} onPress={onDirections}>
+        <Ionicons name="navigate" size={18} color="#2C2C2C" />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
+const DARK_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#1B003F' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#F2EBFD' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#1B003F' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2C1A4A' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#3D2060' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3D2060' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0D001F' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1F0A3D' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1A0A35' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2C1A4A' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#4A2080' }] },
+  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1B003F' }] },
+];
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#1B003F' },
+
+  routeSafe: { position: 'absolute', top: 0, left: 0, right: 0 },
+  routeBanner: {
+    marginHorizontal: 16, marginTop: 8,
+    backgroundColor: 'rgba(44,44,44,0.92)',
+    borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  routeText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#FFFFFF' },
+  routeClear: { fontFamily: 'Inter_500Medium', fontSize: 14, color: '#C6FF34' },
+
+  // Drawer collapsed: just search + chips
+  drawer: {
+    position: 'absolute',
+    left: 5, right: 5, bottom: 135,
+    backgroundColor: '#2C2C2C',
+    borderRadius: 38,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 20,
+    gap: 12,
+  },
+  // Expanded: grows upward to show list
+  drawerExpanded: {
+    maxHeight: height * 0.72,
+  },
+
+  handleWrap: { alignItems: 'center', paddingVertical: 2 },
+  handle: {
+    width: 68, height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    paddingHorizontal: 10,
+    height: 62,
+    gap: 8,
+  },
+  searchText: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: '#FFFFFF',
+    padding: 0,
+  },
+  filterBtn: {
+    width: 62, height: 62,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  chipsRow: { flexDirection: 'row', gap: 7, paddingHorizontal: 4 },
+  chip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 6, paddingVertical: 4,
+  },
+  chipActive: { backgroundColor: '#C6FF34' },
+  chipText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#2C2C2C' },
+  chipTextActive: { color: '#2C2C2C' },
+
+  list: { flexGrow: 0 },
+  listContent: { paddingBottom: 4 },
+
+  emptyWrap: { paddingVertical: 20, alignItems: 'center' },
+  emptyText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: 'rgba(255,255,255,0.4)' },
+
+  // Place card
+  card: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    borderWidth: 1, borderColor: '#2C2C2C',
+    padding: 10, paddingRight: 22,
+    gap: 20,
+  },
+  cardImg: {
+    width: 70, height: 72,
+    borderRadius: 18, overflow: 'hidden',
+    backgroundColor: '#F8FAFC',
+  },
+  cardImgFill: { width: '100%', height: '100%' },
+  cardImgPlaceholder: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(44,44,44,0.05)',
+  },
+  cardInfo: { flex: 1, gap: 4 },
+  cardName: { fontFamily: 'Inter_600SemiBold', fontSize: 20, color: '#2C2C2C', lineHeight: 24 },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
+  distText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: 'rgba(44,44,44,0.5)' },
+  cardVerified: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
+  verifiedText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#2C2C2C' },
+  navBtn: {
+    width: 40, height: 40,
+    borderRadius: 14,
+    backgroundColor: '#C6FF34',
+    alignItems: 'center', justifyContent: 'center',
+  },
+});

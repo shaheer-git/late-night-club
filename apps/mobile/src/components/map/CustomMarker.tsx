@@ -1,32 +1,36 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { PlaceStatus } from '../../types';
-import { Colors, Radius } from '../../constants/theme';
 
-interface Props { status: PlaceStatus; label?: string; active?: boolean; }
+interface Props {
+  status: PlaceStatus;
+  label?: string;
+  active?: boolean;
+}
 
-const STATUS_COLOR: Record<PlaceStatus, string> = {
-  open: Colors.statusOpen,
-  closed: Colors.statusClosed,
-  unknown: Colors.statusUnknown,
-};
-
-export default function CustomMarker({ status, label, active }: Props) {
-  const color = STATUS_COLOR[status];
+export default function CustomMarker({ label, active }: Props) {
+  // Figma: default = #F2EBFD bg, active = #7E3BED bg
+  // pill: row, alignItems center, gap 2, padding 6, borderRadius full
+  // shadow: 0px 4px 12px rgba(0,0,0,0.4)
   return (
-    <View style={[styles.wrapper, active && styles.wrapperActive]}>
-      <View style={[styles.dot, { backgroundColor: color }]} />
-      {label && <Text style={styles.label} numberOfLines={1}>{label}</Text>}
+    <View style={[styles.pill, active && styles.pillActive]}>
+      {/* Location pin dot */}
+      <View style={[styles.dot, active && styles.dotActive]} />
+      {label && (
+        <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
+          {label}
+        </Text>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.purpleLight,
-    borderRadius: Radius.full,
+    backgroundColor: '#F2EBFD',
+    borderRadius: 100,
     paddingHorizontal: 6,
     paddingVertical: 6,
     gap: 2,
@@ -36,15 +40,26 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  wrapperActive: {
-    backgroundColor: Colors.purple,
+  pillActive: {
+    backgroundColor: '#7E3BED',
     paddingHorizontal: 12,
   },
-  dot: { width: 8, height: 8, borderRadius: 4 },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#7E3BED',
+  },
+  dotActive: {
+    backgroundColor: '#FFFFFF',
+  },
   label: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
-    color: Colors.dark,
-    maxWidth: 100,
+    fontSize: 14,
+    color: '#2C2C2C',
+    maxWidth: 120,
+  },
+  labelActive: {
+    color: '#FFFFFF',
   },
 });
