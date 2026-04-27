@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, FlatList, Dimensions, Image,
+  Linking, Platform,
 } from 'react-native';
-import MapView, { Marker, Polyline, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -29,6 +30,22 @@ const FILTER_CHIPS = [
   { label: 'Food',              value: 'food' },
 ];
 
+function openNativeNavigation(toLat: number, toLng: number) {
+  const url = Platform.select({
+    ios: `maps://app?daddr=${toLat},${toLng}&dirflg=d`,
+    android: `google.navigation:q=${toLat},${toLng}&mode=d`,
+  });
+  if (url) {
+    Linking.canOpenURL(url).then(supported => {
+      Linking.openURL(
+        supported
+          ? url
+          : `https://www.google.com/maps/dir/?api=1&destination=${toLat},${toLng}&travelmode=driving`
+      );
+    });
+  }
+}
+
 // Drawer has two heights: collapsed (search + chips) and expanded (full list)
 type DrawerState = 'collapsed' | 'expanded';
 
@@ -46,6 +63,7 @@ export default function SearchScreen() {
   const [drawer, setDrawer] = useState<DrawerState>('collapsed');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [showChips, setShowChips] = useState(true);
 
   useEffect(() => {
     if (lat && lng) fetchNearby();
@@ -67,7 +85,16 @@ export default function SearchScreen() {
   const handleDirections = async (place: Place) => {
     if (!lat || !lng) return;
     const r = await getRoute(lat, lng, place.lat, place.lng);
-    if (r) setRoute(r.coordinates, r.distance, r.duration);
+    if (r) {
+      setRoute(r.coordinates, r.distance, r.duration);
+      mapRef.current?.fitToCoordinates(r.coordinates, {
+        edgePadding: { top: 80, right: 40, bottom: 300, left: 40 },
+        animated: true,
+      });
+      setDrawer('collapsed');
+      searchRef.current?.blur();
+    }
+    openNativeNavigation(place.lat, place.lng);
   };
 
   const filteredPlaces = places.filter(p => {
@@ -86,7 +113,7 @@ export default function SearchScreen() {
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
-        provider={PROVIDER_DEFAULT}
+        provider={PROVIDER_GOOGLE}
         customMapStyle={DARK_MAP_STYLE}
         initialRegion={{
           latitude: lat ?? 12.9352,
@@ -101,11 +128,6 @@ export default function SearchScreen() {
           searchRef.current?.blur();
         }}
       >
-        <UrlTile
-          urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maximumZ={19}
-          flipY={false}
-        />
         {places.map(place => (
           <Marker
             key={place.id}
@@ -121,7 +143,12 @@ export default function SearchScreen() {
           </Marker>
         ))}
         {route && (
-          <Polyline coordinates={route} strokeColor="#B289F4" strokeWidth={3} />
+          <Polyline
+            coordinates={route}
+            strokeColor="#7E3BED"
+            strokeWidth={4}
+            lineDashPattern={[0]}
+          />
         )}
       </MapView>
 
@@ -174,33 +201,38 @@ export default function SearchScreen() {
               </TouchableOpacity>
             )}
           </View>
-          {/* Filter icon button */}
-          <TouchableOpacity style={styles.filterBtn}>
+          {/* Filter icon button — toggles chips */}
+          <TouchableOpacity
+            style={[styles.filterBtn, showChips && styles.filterBtnActive]}
+            onPress={() => setShowChips(v => !v)}
+          >
             <Ionicons name="options-outline" size={22} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
-        {/* Filter chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsRow}
-        >
-          {FILTER_CHIPS.map(chip => {
-            const active = activeFilter === chip.value;
-            return (
-              <TouchableOpacity
-                key={chip.value}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setActiveFilter(active ? null : chip.value)}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {chip.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        {/* Filter chips — toggled by filter button */}
+        {showChips && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsRow}
+          >
+            {FILTER_CHIPS.map(chip => {
+              const active = activeFilter === chip.value;
+              return (
+                <TouchableOpacity
+                  key={chip.value}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => setActiveFilter(active ? null : chip.value)}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {chip.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* Expanded: scrollable place list */}
         {drawer === 'expanded' && (
@@ -281,19 +313,29 @@ function SearchPlaceCard({
   );
 }
 
+// Figma dark purple map style — matches #1B003F basemap
 const DARK_MAP_STYLE = [
-  { elementType: 'geometry', stylers: [{ color: '#1B003F' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#F2EBFD' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#1B003F' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2C1A4A' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#3D2060' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3D2060' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0D001F' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1F0A3D' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1A0A35' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2C1A4A' }] },
-  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#4A2080' }] },
-  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1B003F' }] },
+  { elementType: 'geometry',            stylers: [{ color: '#1B003F' }] },
+  { elementType: 'labels.icon',         stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill',    stylers: [{ color: '#B289F4' }] },
+  { elementType: 'labels.text.stroke',  stylers: [{ color: '#1B003F' }] },
+  { featureType: 'landscape',            elementType: 'geometry',        stylers: [{ color: '#1B003F' }] },
+  { featureType: 'administrative',       elementType: 'geometry',        stylers: [{ color: '#2C1A4A' }] },
+  { featureType: 'administrative',       elementType: 'geometry.stroke', stylers: [{ color: '#4A2080' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#D0AAFF' }] },
+  { featureType: 'poi',                  stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park',             elementType: 'geometry',        stylers: [{ color: '#150030' }] },
+  { featureType: 'road',                 elementType: 'geometry',        stylers: [{ color: '#2C1A4A' }] },
+  { featureType: 'road',                 elementType: 'geometry.stroke', stylers: [{ color: '#3D2060' }] },
+  { featureType: 'road',                 elementType: 'labels.text.fill', stylers: [{ color: '#9E7FBF' }] },
+  { featureType: 'road.arterial',        elementType: 'geometry',        stylers: [{ color: '#2C1A4A' }] },
+  { featureType: 'road.highway',         elementType: 'geometry',        stylers: [{ color: '#3D2060' }] },
+  { featureType: 'road.highway',         elementType: 'geometry.stroke', stylers: [{ color: '#5A3090' }] },
+  { featureType: 'road.local',           elementType: 'labels.text.fill', stylers: [{ color: '#7B5EA7' }] },
+  { featureType: 'transit',              stylers: [{ visibility: 'off' }] },
+  { featureType: 'water',                elementType: 'geometry',        stylers: [{ color: '#0D001F' }] },
+  { featureType: 'water',                elementType: 'labels.text.fill', stylers: [{ color: '#4A2080' }] },
 ];
 
 const styles = StyleSheet.create({
@@ -354,6 +396,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 18,
     alignItems: 'center', justifyContent: 'center',
+  },
+  filterBtnActive: {
+    backgroundColor: 'rgba(198,255,52,0.15)',
+    borderWidth: 1,
+    borderColor: '#C6FF34',
   },
 
   chipsRow: { flexDirection: 'row', gap: 7, paddingHorizontal: 4 },
