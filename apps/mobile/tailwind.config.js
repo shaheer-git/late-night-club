@@ -12,7 +12,7 @@ module.exports = {
         lime:    '#C6FF34',
         purple:  '#7E3BED',
         'purple-light': '#F2EBFD',
-        'map-bg': '#1B003F',
+        'map-bg': '#1E1E1E',
         'dark-bg': '#30343F',
         'card-bg': 'rgba(255,255,255,0.08)',
         'status-open':    '#22C55E',

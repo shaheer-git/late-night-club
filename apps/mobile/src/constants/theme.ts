@@ -7,7 +7,7 @@ export const Colors = {
   purpleLight: '#F2EBFD',
 
   // Backgrounds
-  mapBg: '#1B003F',
+  mapBg: '#1E1E1E',
   darkBg: '#30343F',
   cardBg: 'rgba(255,255,255,0.08)',
   overlayBg: 'rgba(44,44,44,0.5)',

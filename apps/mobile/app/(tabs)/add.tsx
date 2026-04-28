@@ -275,14 +275,27 @@ export default function AddPlaceScreen() {
 }
 
 const DARK_MAP_STYLE = [
-  { elementType: 'geometry', stylers: [{ color: '#1B003F' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#F2EBFD' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#1B003F' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2C1A4A' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3D2060' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0D001F' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1F0A3D' }] },
-  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1B003F' }] },
+  { elementType: 'geometry',            stylers: [{ color: '#1A212B' }] }, // Deep navy background
+  { elementType: 'labels.icon',         stylers: [{ visibility: 'on' }, { saturation: -100 }, { lightness: 20 }] }, // Icons are visible but muted
+  { elementType: 'labels.text.fill',    stylers: [{ color: '#8E96A0' }] }, // Light grey text
+  { elementType: 'labels.text.stroke',  stylers: [{ color: '#1A212B' }] }, // Match background
+  { featureType: 'landscape',            elementType: 'geometry',        stylers: [{ color: '#1A212B' }] },
+  { featureType: 'administrative',       elementType: 'geometry',        stylers: [{ color: '#242F3E' }] },
+  { featureType: 'administrative',       elementType: 'geometry.stroke', stylers: [{ color: '#38414E' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#9DA5B1' }] },
+  { featureType: 'poi',                  stylers: [{ visibility: 'on' }] }, // POIs like "Dyu Art Cafe" are visible in your image
+  { featureType: 'poi.park',             elementType: 'geometry',        stylers: [{ color: '#18202A' }] },
+  { featureType: 'road',                 elementType: 'geometry',        stylers: [{ color: '#2A3442' }] }, // Muted blue-grey roads
+  { featureType: 'road',                 elementType: 'geometry.stroke', stylers: [{ color: '#212A37' }] },
+  { featureType: 'road',                 elementType: 'labels.text.fill', stylers: [{ color: '#737D8C' }] },
+  { featureType: 'road.arterial',        elementType: 'geometry',        stylers: [{ color: '#2A3442' }] },
+  { featureType: 'road.highway',         elementType: 'geometry',        stylers: [{ color: '#303B4C' }] },
+  { featureType: 'road.highway',         elementType: 'geometry.stroke', stylers: [{ color: '#212A37' }] },
+  { featureType: 'road.local',           elementType: 'labels.text.fill', stylers: [{ color: '#737D8C' }] },
+  { featureType: 'transit',               stylers: [{ visibility: 'off' }] },
+  { featureType: 'water',                elementType: 'geometry',        stylers: [{ color: '#11171E' }] },
+  { featureType: 'water',                elementType: 'labels.text.fill', stylers: [{ color: '#3D4D5D' }] },
 ];
 
 const styles = StyleSheet.create({
@@ -409,7 +422,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 3,
     borderColor: '#FFFFFF',
-    backgroundColor: '#1B003F',
+    backgroundColor: '#1E1E1E',
   },
   mapInner: { flex: 1 },
   locBtn: {
