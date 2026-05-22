@@ -1,139 +1,240 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  Image, KeyboardAvoidingView, Platform, ScrollView, Alert,
+  StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useAuth } from '../../src/hooks/useAuth';
+import { Ionicons } from '@expo/vector-icons';
+
+// Screen 2 — Phone number entry
+// "What's your number?" — India flag + +91 + phone input
+// Continue → OTP screen
+// Social: Google, Facebook, Apple
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [phone, setPhone] = useState('');
 
-  const canContinue = email.trim().length > 0;
+  const canContinue = phone.trim().length >= 7;
 
-  const handleLogin = async () => {
+  const handleContinue = () => {
     if (!canContinue) return;
-    setLoading(true);
-    try {
-      await login(email.trim().toLowerCase(), password);
-      // Return to add tab so user lands on the Add/Verify choice screen
-      router.replace('/(tabs)/add');
-    } catch (e: any) {
-      const msg = e?.response?.data?.detail ?? 'Login failed. Check your credentials.';
-      Alert.alert('Login Failed', msg);
-    } finally {
-      setLoading(false);
-    }
+    router.push({ pathname: '/(auth)/otp', params: { phone: `+91${phone.trim()}` } });
   };
 
   return (
-    <View className="flex-1 bg-dark">
+    <View style={styles.screen}>
       <StatusBar style="light" />
-      <View className="absolute top-[129px] left-[115px] w-[162px] h-[161px] rounded-full bg-purple/5" />
-
-      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
+          style={{ flex: 1 }}
         >
-          <TouchableOpacity
-            className="absolute top-[10px] left-[10px] w-11 h-11 bg-white/10 rounded-lg items-center justify-center z-10"
-            onPress={() => router.back()}
-          >
-            <Text className="text-white text-xl">←</Text>
-          </TouchableOpacity>
-
           <ScrollView
-            contentContainerStyle={{ paddingTop: '35%', paddingHorizontal: 24 }}
+            contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <Text className="font-bold text-[28px] text-white leading-10 mb-6">
-              Welcome back
-            </Text>
+            {/* Back */}
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
 
-            <View className="gap-4">
-              {/* Email */}
-              <View className="flex-row items-center bg-white rounded-lg px-4 h-[58px]">
-                <TextInput
-                  className="flex-1 font-regular text-[16px] text-dark"
-                  placeholder="Email"
-                  placeholderTextColor="#2C2C2C"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={email}
-                  onChangeText={setEmail}
-                />
-              </View>
+            {/* Icon */}
+            <View style={styles.iconWrap}>
+              <Image
+                source={require('../../assets/images/auth/Login-Screen-Icon.png')}
+                style={styles.icon}
+                resizeMode="contain"
+              />
+            </View>
 
-              {/* Password */}
-              <View className="flex-row items-center bg-white rounded-lg px-4 h-[58px]">
-                <TextInput
-                  className="flex-1 font-regular text-[16px] text-dark"
-                  placeholder="Password"
-                  placeholderTextColor="#2C2C2C"
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-                />
-              </View>
+            {/* Heading */}
+            <Text style={styles.heading}>What's your number?</Text>
 
-              {/* Login button */}
-              <TouchableOpacity
-                className={`h-[68px] bg-lime rounded-lg items-center justify-center ${
-                  (!canContinue || loading) ? 'opacity-50' : ''
-                }`}
-                onPress={handleLogin}
-                disabled={!canContinue || loading}
-              >
-                <Text className="font-semibold text-[16px] text-dark">
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </Text>
+            {/* Phone row */}
+            <View style={styles.phoneRow}>
+              <TouchableOpacity style={styles.countryPicker}>
+                <Text style={styles.flag}>🇮🇳</Text>
+                <Ionicons name="chevron-down" size={14} color="#2C2C2C" />
               </TouchableOpacity>
 
-              {/* Divider */}
-              <View className="flex-row items-center gap-2">
-                <View className="flex-1 h-px bg-white/50" />
-                <Text className="font-regular text-[14px] text-white/50">Or</Text>
-                <View className="flex-1 h-px bg-white/50" />
-              </View>
-
-              {/* Google button */}
-              <TouchableOpacity className="h-[58px] items-center justify-center">
-                <Image
-                  source={require('../../assets/images/google-btn.png')}
-                  className="w-[295px] h-[58px]"
-                  resizeMode="contain"
+              <View style={styles.phoneInput}>
+                <Text style={styles.dialCode}>+91</Text>
+                <TextInput
+                  style={styles.phoneText}
+                  placeholder="Enter Phone Number"
+                  placeholderTextColor="rgba(44,44,44,0.4)"
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                  maxLength={10}
                 />
-              </TouchableOpacity>
+              </View>
+            </View>
 
-              {/* Register link */}
-              <TouchableOpacity
-                className="items-center py-3"
-                onPress={() => router.push('/(auth)/register')}
-              >
-                <Text className="font-regular text-[14px] text-white/50">
-                  Don't have an account?{' '}
-                  <Text className="text-white font-medium">Sign Up</Text>
-                </Text>
+            {/* Continue */}
+            <TouchableOpacity
+              style={[styles.btn, !canContinue && styles.btnDisabled]}
+              onPress={handleContinue}
+              disabled={!canContinue}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.btnText}>Continue</Text>
+            </TouchableOpacity>
+
+            {/* Social login */}
+            <View style={styles.socialRow}>
+              <TouchableOpacity style={styles.socialBtn}>
+                <Text style={styles.socialG}>G</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialBtn}>
+                <Text style={styles.socialF}>f</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialBtn}>
+                <Ionicons name="logo-apple" size={26} color="#2C2C2C" />
               </TouchableOpacity>
             </View>
+
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <View className="absolute bottom-[10%] self-center">
-          <Image
-            source={require('../../assets/images/lnc-logo.png')}
-            className="w-20 h-20"
-            resizeMode="contain"
-          />
+        {/* Step dots — dot 1 active (Login step) */}
+        <View style={styles.dots}>
+          <View style={[styles.dot, styles.dotActive]} />
+          <View style={styles.dot} />
+          <View style={styles.dot} />
         </View>
       </SafeAreaView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#2C2C2C' },
+  safe: { flex: 1 },
+
+  scroll: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
+    gap: 24,
+  },
+
+  backBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  iconWrap: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  icon: {
+    width: 140,
+    height: 140,
+  },
+
+  heading: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 26,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+
+  phoneRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  countryPicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 58,
+    gap: 6,
+  },
+  flag: { fontSize: 22 },
+  phoneInput: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 58,
+    gap: 8,
+  },
+  dialCode: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
+    color: '#2C2C2C',
+  },
+  phoneText: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    color: '#2C2C2C',
+    padding: 0,
+  },
+
+  btn: {
+    height: 68,
+    backgroundColor: '#C6FF34',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnDisabled: { opacity: 0.5 },
+  btnText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+    color: '#2C2C2C',
+  },
+
+  socialRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 4,
+  },
+  socialBtn: {
+    width: 68,
+    height: 68,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialG: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 26,
+    color: '#2C2C2C',
+  },
+  socialF: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 26,
+    color: '#2C2C2C',
+  },
+
+  dots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+  },
+  dot: {
+    width: 28,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  dotActive: { backgroundColor: '#FFFFFF' },
+});

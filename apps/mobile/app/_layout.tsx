@@ -1,5 +1,5 @@
 import '../global.css';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -68,6 +68,7 @@ export default function RootLayout() {
             <Stack.Screen name="place" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="search" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="add-place" options={{ animation: 'slide_from_bottom' }} />
           </Stack>
         </AuthRestorer>
       </SafeAreaProvider>

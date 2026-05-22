@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ const TABS = [
 
 function TabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 7) }]}>
@@ -28,10 +29,19 @@ function TabBar({ state, navigation }: any) {
           const tab = TABS[idx];
           const isFocused = state.index === idx;
 
+          const handlePress = () => {
+            // "Add" tab opens the full-screen add-place route (no tab bar)
+            if (route.name === 'add') {
+              router.push('/add-place');
+              return;
+            }
+            navigation.navigate(route.name);
+          };
+
           return (
             <TouchableOpacity
               key={route.key}
-              onPress={() => navigation.navigate(route.name)}
+              onPress={handlePress}
               activeOpacity={0.8}
               style={[styles.pill, isFocused && styles.pillActive]}
             >
