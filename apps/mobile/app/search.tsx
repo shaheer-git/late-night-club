@@ -22,7 +22,7 @@ export default function SearchScreen() {
   const [results, setResults] = useState<Place[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -115,7 +115,7 @@ export default function SearchScreen() {
         {/* Recent searches */}
         {!query && recent.length > 0 && (
           <View className="px-4 pt-2">
-            <Text className="font-semibold text-[14px] text-white/50 mb-3">Recent</Text>
+            <Text className="font-semibold text-[13px] text-white/50 mb-3 uppercase tracking-wider">Recent</Text>
             {recent.map(r => (
               <TouchableOpacity
                 key={r}

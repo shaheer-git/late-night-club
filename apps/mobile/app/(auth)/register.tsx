@@ -173,13 +173,13 @@ const styles = StyleSheet.create({
   inputBox: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    height: 58,
+    height: 56,
     paddingHorizontal: 20,
     justifyContent: 'center',
   },
   inputText: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 16,
+    fontSize: 15,
     color: '#2C2C2C',
     padding: 0,
   },

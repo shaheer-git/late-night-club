@@ -25,7 +25,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[rgba(44,44,44,0.5)]">
+    <View className="flex-1 bg-dark">
       <StatusBar style="light" />
       <SafeAreaView className="flex-1" edges={['top']}>
 
@@ -37,7 +37,7 @@ export default function SettingsScreen() {
           >
             <Text className="text-white text-lg">←</Text>
           </TouchableOpacity>
-          <Text className="font-semibold text-[18px] text-white flex-1">Settings</Text>
+          <Text className="font-semibold text-[17px] text-white flex-1 text-center">Settings</Text>
         </View>
 
         {/* Section tabs */}
@@ -45,7 +45,7 @@ export default function SettingsScreen() {
           {(['profile', 'general'] as const).map(s => (
             <TouchableOpacity
               key={s}
-              className={`flex-1 h-10 rounded-lg items-center justify-center ${
+              className={`flex-1 h-10 rounded-[18px] items-center justify-center ${
                 activeSection === s ? 'bg-lime' : 'bg-white/10'
               }`}
               onPress={() => setActiveSection(s)}
@@ -66,7 +66,7 @@ export default function SettingsScreen() {
           {activeSection === 'profile' && (
             <>
               {/* Avatar */}
-              <View className="bg-dark rounded-xl p-4 items-center gap-3">
+              <View className="bg-[#3A3A3A] rounded-xl p-4 items-center gap-3">
                 <View className="w-[84px] h-[84px] rounded-full bg-[#FFDBDE] items-center justify-center relative">
                   <Text className="text-[36px]">👤</Text>
                   <View className="absolute bottom-0 right-0 w-[22px] h-[22px] bg-lime rounded-full items-center justify-center">
@@ -76,21 +76,21 @@ export default function SettingsScreen() {
               </View>
 
               {/* Full Name */}
-              <View className="bg-dark rounded-xl p-4 gap-3">
-                <Text className="font-regular text-[16px] text-white">Full Name</Text>
-                <View className="bg-dark rounded-lg px-[10px] h-[52px] justify-center">
+              <View className="bg-[#3A3A3A] rounded-xl p-4 gap-3">
+                <Text className="font-medium text-[15px] text-white">Full Name</Text>
+                <View className="bg-white rounded-md px-4 h-14 justify-center">
                   <TextInput
-                    className="font-regular text-[18px] text-white/50"
+                    className="font-regular text-[15px] text-dark p-0"
                     value={name}
                     onChangeText={setName}
-                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    placeholderTextColor="rgba(44,44,44,0.4)"
                   />
                 </View>
               </View>
 
               {/* Change City */}
               <TouchableOpacity
-                className="bg-dark rounded-lg h-[68px] items-center justify-center"
+                className="bg-[#3A3A3A] rounded-[18px] h-[68px] items-center justify-center"
                 onPress={() => router.push('/onboarding/city-select')}
               >
                 <Text className="font-regular text-[18px] text-white">Change City</Text>
@@ -98,7 +98,7 @@ export default function SettingsScreen() {
 
               {/* Save */}
               <TouchableOpacity
-                className={`h-[68px] bg-lime rounded-lg items-center justify-center ${saving ? 'opacity-50' : ''}`}
+                className={`h-[68px] bg-lime rounded-[18px] items-center justify-center ${saving ? 'opacity-50' : ''}`}
                 onPress={saveProfile}
                 disabled={saving}
               >
@@ -112,10 +112,10 @@ export default function SettingsScreen() {
           {activeSection === 'general' && (
             <>
               {/* Region & Location */}
-              <Text className="font-medium text-[16px] text-white px-1 pt-2">
+              <Text className="font-semibold text-[13px] text-white/50 px-1 pt-2 uppercase tracking-wider">
                 Region & Location
               </Text>
-              <View className="bg-dark rounded-xl p-[10px] gap-2">
+              <View className="bg-[#3A3A3A] rounded-xl p-[10px] gap-2">
                 {[
                   { icon: '⚙️', label: 'City', sub: 'Bangalore, IN' },
                   { icon: '📍', label: 'Location access', sub: 'While Using App' },
@@ -137,8 +137,8 @@ export default function SettingsScreen() {
               </View>
 
               {/* Preferences */}
-              <Text className="font-medium text-[16px] text-white px-1">Preferences</Text>
-              <View className="bg-dark rounded-xl p-[10px] gap-2">
+              <Text className="font-semibold text-[13px] text-white/50 px-1 uppercase tracking-wider">Preferences</Text>
+              <View className="bg-[#3A3A3A] rounded-xl p-[10px] gap-2">
                 <View className="flex-row items-center justify-between px-2 h-[52px]">
                   <View className="flex-row items-center gap-2">
                     <Text className="text-[18px]">🔔</Text>
@@ -165,8 +165,8 @@ export default function SettingsScreen() {
               </View>
 
               {/* Data & Privacy */}
-              <Text className="font-medium text-[16px] text-white px-1">Data & Privacy</Text>
-              <View className="bg-dark rounded-xl p-[10px] gap-2">
+              <Text className="font-semibold text-[13px] text-white/50 px-1 uppercase tracking-wider">Data & Privacy</Text>
+              <View className="bg-[#3A3A3A] rounded-xl p-[10px] gap-2">
                 {[
                   { icon: '🗑️', label: 'Clear cache' },
                   { icon: '🛡️', label: 'Privacy policy' },

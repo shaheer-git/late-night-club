@@ -90,12 +90,12 @@ export default function LoginScreen() {
               <TouchableOpacity style={styles.socialBtn}>
                 <Text style={styles.socialG}>G</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn}>
+              {/* <TouchableOpacity style={styles.socialBtn}>
                 <Text style={styles.socialF}>f</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialBtn}>
                 <Ionicons name="logo-apple" size={26} color="#2C2C2C" />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
 
           </ScrollView>
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     paddingHorizontal: 12,
-    height: 58,
+    height: 56,
     gap: 6,
   },
   flag: { fontSize: 22 },
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     paddingHorizontal: 16,
-    height: 58,
+    height: 56,
     gap: 8,
   },
   dialCode: {

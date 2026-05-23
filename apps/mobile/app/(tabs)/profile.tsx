@@ -1,63 +1,65 @@
-import { useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, Image, RefreshControl,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/hooks/useAuth';
-import { usersApi } from '../../src/api/users';
-import { Place } from '../../src/types';
-import StatusBadge from '../../src/components/place/StatusBadge';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuth();
-  const [contributions, setContributions] = useState<Place[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'added' | 'verified'>('added');
+  const { user: realUser, isAuthenticated: realAuth, logout } = useAuth();
 
-  useEffect(() => {
-    if (isAuthenticated) fetchContributions();
-  }, [isAuthenticated]);
+  // ── DEV MOCK — remove when backend auth is working ────────────────────────
+  const DEV_MOCK = true; // set to false to use real auth
+  const isAuthenticated = DEV_MOCK ? true : realAuth;
+  const user = DEV_MOCK ? {
+    id: 'dev-1',
+    name: 'Heisenberg',
+    email: 'dev@lnc.app',
+    contribution_count: 23,
+    verification_count: 7,
+    created_at: new Date().toISOString(),
+  } : realUser;
+  // ─────────────────────────────────────────────────────────────────────────
 
-  const fetchContributions = async () => {
-    setLoading(true);
-    try {
-      const { data } = await usersApi.getMyContributions();
-      setContributions(data);
-    } catch {}
-    setLoading(false);
-  };
-
+  // ── Not logged in ──────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
-      <View className="flex-1 bg-[rgba(44,44,44,0.5)]">
+      <View style={styles.container}>
         <StatusBar style="light" />
-        <SafeAreaView className="flex-1" edges={['top']}>
-          <View className="items-center gap-5 pt-12 px-[46px]">
-            <View className="w-[84px] h-[84px] rounded-full bg-[#FFDCB9] items-center justify-center">
-              <Text className="text-[36px]">🌊</Text>
+        <SafeAreaView style={styles.safe} edges={['top']}>
+          <View style={styles.guestCenter}>
+            <View style={styles.guestAvatar}>
+              <Text style={styles.guestEmoji}>🌊</Text>
             </View>
-            <View className="items-center gap-2">
-              <Text className="font-semibold text-[18px] text-white text-center">Ahoy, Wanderer!</Text>
-              <Text className="font-medium text-[14px] text-white leading-6 text-center">
-                Log in to add or verify places and help keep Late Night accurate.
+            <View style={styles.guestTextBlock}>
+              <Text style={styles.guestTitle}>Ahoy, Wanderer!</Text>
+              <Text style={styles.guestSubtitle}>
+                Log in to add or verify places and help keep Late Night Club accurate.
               </Text>
             </View>
           </View>
-          <View className="px-6 mt-5 gap-3">
+          <View style={styles.guestButtons}>
             <TouchableOpacity
-              className="h-[68px] bg-lime rounded-lg items-center justify-center"
+              style={styles.btnLime}
               onPress={() => router.push('/(auth)/login')}
+              activeOpacity={0.85}
             >
-              <Text className="font-semibold text-[18px] text-dark">Log In</Text>
+              <Text style={styles.btnLimeText}>Log In</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className="h-[68px] border border-white rounded-lg items-center justify-center"
-              onPress={() => router.push('/(auth)/register')}
+              style={styles.btnOutline}
+              onPress={() => router.push('/(auth)/login')}
+              activeOpacity={0.85}
             >
-              <Text className="font-semibold text-[18px] text-white">Create Account</Text>
+              <Text style={styles.btnOutlineText}>Create Account</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -65,143 +67,304 @@ export default function ProfileScreen() {
     );
   }
 
+  // ── Logged in ──────────────────────────────────────────────────────────────
   return (
-    <View className="flex-1 bg-[rgba(44,44,44,0.5)]">
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <SafeAreaView className="flex-1" edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140, gap: 16 }}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchContributions} tintColor="#fff" />}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           {/* Profile card */}
-          <View className="bg-dark rounded-xl overflow-hidden pb-3 items-center">
+          <View style={styles.profileCard}>
             {/* Banner */}
-            <View className="w-full h-[174px] bg-[#333]">
+            <Image
+              source={require('../../assets/images/profile-banner.png')}
+              style={styles.banner}
+              resizeMode="cover"
+            />
+            
+            {/* Avatar */}
+            <View style={styles.avatarContainer}>
               <Image
-                source={require('../../assets/images/map-bg.png')}
-                className="w-full h-full"
+                source={require('../../assets/images/default-avatar.png')}
+                style={styles.avatar}
                 resizeMode="cover"
               />
             </View>
-            {/* Avatar */}
-            <View className="-mt-[42px] border-[3px] border-dark rounded-full">
-              <View className="w-[84px] h-[84px] rounded-full bg-[#FFDBDE] items-center justify-center overflow-hidden">
-                {user?.avatar_url
-                  ? <Image source={{ uri: user.avatar_url }} className="w-full h-full" resizeMode="cover" />
-                  : <Text className="text-[36px]">👤</Text>
-                }
+
+            {/* Username */}
+            <Text style={styles.username}>{user?.name ?? 'User'}</Text>
+
+            {/* Stats row */}
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {String(user?.contribution_count ?? 0).padStart(2, '0')}
+                </Text>
+                <Text style={styles.statLabel}>Pinned Spots</Text>
               </View>
-            </View>
-            <Text className="font-semibold text-[18px] text-white mt-2">{user?.name}</Text>
-            {/* Stats */}
-            <View className="flex-row w-[322px] justify-between mt-4">
-              {[
-                { val: user?.contribution_count ?? 0, label: 'Pinned Spots' },
-                { val: user?.verification_count ?? 0, label: 'Verified Places' },
-                { val: 2000, label: 'Trust Score' },
-              ].map(s => (
-                <View key={s.label} className="flex-1 items-center">
-                  <Text className="font-semibold text-[18px] text-white text-center">{s.val}</Text>
-                  <Text className="font-regular text-[12px] text-white leading-6 text-center">{s.label}</Text>
-                </View>
-              ))}
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {String(user?.verification_count ?? 0).padStart(2, '0')}
+                </Text>
+                <Text style={styles.statLabel}>Verified Places</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>2000</Text>
+                <Text style={styles.statLabel}>Trust Score</Text>
+              </View>
             </View>
           </View>
 
-          {/* Menu group 1 */}
-          <View className="bg-dark rounded-xl p-[10px] gap-2">
-            {[
-              { icon: '👤', label: 'Profile Settings', onPress: () => router.push('/settings') },
-              { icon: '🏅', label: 'My Contributions', onPress: () => {} },
-            ].map((item, idx, arr) => (
-              <View key={item.label}>
-                <TouchableOpacity
-                  className="flex-row items-center justify-between px-2 py-1 h-[52px]"
-                  onPress={item.onPress}
-                >
-                  <View className="flex-row items-center gap-1">
-                    <Text className="text-[18px] w-[18px]">{item.icon}</Text>
-                    <Text className="font-regular text-[16px] text-white px-[10px]">{item.label}</Text>
-                  </View>
-                  <Text className="text-white text-xl">›</Text>
-                </TouchableOpacity>
-                {idx < arr.length - 1 && <View className="h-px bg-white/50 mx-1" />}
-              </View>
-            ))}
+          {/* Menu section 1 */}
+          <View style={styles.menuCard}>
+            <MenuRow
+              icon="person-outline"
+              label="Profile Settings"
+              onPress={() => router.push('/profile-settings')}
+            />
+            <View style={styles.divider} />
+            <MenuRow
+              icon="bookmark-outline"
+              label="My Contributions"
+              onPress={() => router.push('/my-contributions')}
+            />
           </View>
 
-          {/* Menu group 2 */}
-          <View className="bg-dark rounded-xl p-[10px] gap-2">
-            {[
-              { icon: '⚙️', label: 'General Settings', onPress: () => router.push('/settings') },
-              { icon: '❓', label: 'Help & Support', onPress: () => {} },
-            ].map((item, idx, arr) => (
-              <View key={item.label}>
-                <TouchableOpacity
-                  className="flex-row items-center justify-between px-2 py-1 h-[52px]"
-                  onPress={item.onPress}
-                >
-                  <View className="flex-row items-center gap-1">
-                    <Text className="text-[18px] w-[18px]">{item.icon}</Text>
-                    <Text className="font-regular text-[16px] text-white px-[10px]">{item.label}</Text>
-                  </View>
-                  <Text className="text-white text-xl">›</Text>
-                </TouchableOpacity>
-                {idx < arr.length - 1 && <View className="h-px bg-white/50 mx-1" />}
-              </View>
-            ))}
+          {/* Menu section 2 */}
+          <View style={styles.menuCard}>
+            <MenuRow
+              icon="settings-outline"
+              label="General Settings"
+              onPress={() => router.push('/general-settings')}
+            />
+            <View style={styles.divider} />
+            <MenuRow
+              icon="help-circle-outline"
+              label="Help & Support"
+              onPress={() => router.push('/help-support')}
+            />
           </View>
 
-          {/* Contributions */}
-          {contributions.length > 0 && (
-            <View className="gap-3">
-              <View className="flex-row gap-3">
-                {(['added', 'verified'] as const).map(t => (
-                  <TouchableOpacity
-                    key={t}
-                    className={`flex-1 h-10 rounded-lg items-center justify-center ${
-                      activeTab === t ? 'bg-lime' : 'bg-white/10'
-                    }`}
-                    onPress={() => setActiveTab(t)}
-                  >
-                    <Text className={`font-semibold text-[13px] ${activeTab === t ? 'text-dark' : 'text-white'}`}>
-                      {t === 'added' ? 'Added Places' : 'Verified Places'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              {contributions.map(place => (
-                <TouchableOpacity
-                  key={place.id}
-                  className="bg-white rounded-xl border border-dark p-3 flex-row gap-3 items-center"
-                  onPress={() => router.push(`/place/${place.id}`)}
-                >
-                  <View className="w-[70px] h-[70px] rounded-lg bg-gray-200 overflow-hidden">
-                    {place.image_urls?.[0]
-                      ? <Image source={{ uri: place.image_urls[0] }} className="w-full h-full" resizeMode="cover" />
-                      : <View className="flex-1 items-center justify-center"><Text className="text-2xl">🏪</Text></View>
-                    }
-                  </View>
-                  <View className="flex-1 gap-1">
-                    <Text className="font-semibold text-[16px] text-dark" numberOfLines={1}>{place.name}</Text>
-                    <StatusBadge status={place.status} size="sm" />
-                  </View>
-                  <Text className="text-dark text-xl">›</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* Logout */}
+          {/* Log Out */}
           <TouchableOpacity
-            className="h-[68px] bg-lime rounded-lg items-center justify-center"
+            style={styles.btnLime}
             onPress={logout}
+            activeOpacity={0.85}
           >
-            <Text className="font-semibold text-[18px] text-dark">Log Out</Text>
+            <Text style={styles.btnLimeText}>Log Out</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
+
+// ── Menu row component ────────────────────────────────────────────────────────
+function MenuRow({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.menuRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.menuRowLeft}>
+        <View style={styles.menuIconBox}>
+          <Ionicons name={icon} size={18} color="#FFFFFF" />
+        </View>
+        <Text style={styles.menuLabel}>{label}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.4)" />
+    </TouchableOpacity>
+  );
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#2C2C2C',
+  },
+  safe: {
+    flex: 1,
+  },
+
+  // ── Guest state ──
+  guestCenter: {
+    alignItems: 'center',
+    paddingTop: 64,
+    paddingHorizontal: 46,
+    gap: 20,
+  },
+  guestAvatar: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: '#FFDCB9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestEmoji: {
+    fontSize: 36,
+  },
+  guestTextBlock: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  guestTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  guestSubtitle: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  guestButtons: {
+    paddingHorizontal: 24,
+    marginTop: 20,
+    gap: 12,
+  },
+
+  // ── Logged-in scroll ──
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 140,
+    gap: 16,
+  },
+
+  // ── Profile card ──
+  profileCard: {
+    backgroundColor: '#3A3A3A',
+    borderRadius: 24,
+    paddingBottom: 24,
+    overflow: 'hidden',
+  },
+  banner: {
+    width: '100%',
+    height: 180,
+  },
+  avatarContainer: {
+    alignSelf: 'flex-start',
+    marginLeft: 24,
+    marginTop: -48,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 4,
+    borderColor: '#3A3A3A',
+    overflow: 'hidden',
+    backgroundColor: '#3A3A3A',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  username: {
+    alignSelf: 'flex-start',
+    fontFamily: 'Inter_700Bold',
+    fontSize: 24,
+    color: '#FFFFFF',
+    marginLeft: 24,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    width: '100%',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  statValue: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 26,
+    color: '#FFFFFF',
+  },
+  statLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+  },
+
+  // ── Menu card ──
+  menuCard: {
+    backgroundColor: '#3A3A3A',
+    borderRadius: 18,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  menuRow: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  menuRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  menuIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginHorizontal: 4,
+  },
+
+  // ── Shared buttons ──
+  btnLime: {
+    height: 68,
+    backgroundColor: '#C6FF34',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnLimeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+    color: '#2C2C2C',
+  },
+  btnOutline: {
+    height: 68,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnOutlineText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+    color: '#FFFFFF',
+  },
+});

@@ -35,11 +35,13 @@ export interface Place {
   distance?: number;
   last_verified_at?: string;
   last_verified_by?: VerifierInfo;
-  verification_count: number;
+  verification_count?: number;
   lat: number;
   lng: number;
   recent_verifications?: Verification[];
   added_by?: VerifierInfo;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Verification {

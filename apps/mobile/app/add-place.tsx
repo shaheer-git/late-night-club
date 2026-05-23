@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(44,44,44,0.08)',
     paddingHorizontal: 16,
-    height: 52,
+    height: 56,
     gap: 10,
   },
   inputText: {
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(44,44,44,0.08)',
     paddingHorizontal: 12,
-    height: 52,
+    height: 56,
     gap: 8,
   },
   timeText: {
