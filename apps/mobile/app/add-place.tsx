@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, Image, StyleSheet,
+  ScrollView, Image, StyleSheet, Alert, Platform, ActivityIndicator
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,8 +9,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocationStore } from '../src/store/locationStore';
+import { useAuth } from '../src/hooks/useAuth';
 import { useAuthStore } from '../src/store/authStore';
+import { usePlacesStore } from '../src/store/placesStore';
 import { placesApi } from '../src/api/places';
 import { mediaApi } from '../src/api/media';
 import { reverseGeocode } from '../src/utils/geocoding';
@@ -19,6 +22,7 @@ import { usePlaces } from '../src/hooks/usePlaces';
 export default function AddPlaceScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const { restoreSession } = useAuth();
   const { lat, lng } = useLocationStore();
   const { fetchNearby } = usePlaces();
   const mapRef = useRef<MapView>(null);
@@ -26,9 +30,20 @@ export default function AddPlaceScreen() {
   const [pinLat, setPinLat] = useState(lat ?? 12.9352);
   const [pinLng, setPinLng] = useState(lng ?? 77.6245);
   const [name, setName] = useState('');
-  const [openTime, setOpenTime] = useState('09:00 PM');
-  const [closeTime, setCloseTime] = useState('04:00 AM');
+  
+  // Default to 9:00 PM and 4:00 AM
+  const defaultOpen = new Date();
+  defaultOpen.setHours(21, 0, 0, 0);
+  const [openTime, setOpenTime] = useState<Date>(defaultOpen);
+  const [showOpen, setShowOpen] = useState(false);
+
+  const defaultClose = new Date();
+  defaultClose.setHours(4, 0, 0, 0);
+  const [closeTime, setCloseTime] = useState<Date>(defaultClose);
+  const [showClose, setShowClose] = useState(false);
+
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [category, setCategory] = useState('cafe');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -72,12 +87,29 @@ export default function AddPlaceScreen() {
   }
 
   // ── Add Place form ────────────────────────────────────────────────────────────
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+
+  const pickImage = () => {
+    Alert.alert('Upload Photo', 'Choose an option', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Take Photo', onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') return Alert.alert('Permission needed', 'Camera permission is required');
+          const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            quality: 0.8,
+          });
+          if (!result.canceled) setImageUri(result.assets[0].uri);
+      }},
+      { text: 'Choose from Library', onPress: async () => {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') return Alert.alert('Permission needed', 'Media permission is required');
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.8,
+          });
+          if (!result.canceled) setImageUri(result.assets[0].uri);
+      }}
+    ]);
   };
 
   const handleSubmit = async () => {
@@ -85,29 +117,41 @@ export default function AddPlaceScreen() {
     setLoading(true);
     try {
       let imageUrls: string[] = [];
-      if (imageUri) {
+      const uploadPromise = async () => {
+        if (!imageUri) return;
         const form = new FormData();
         form.append('file', { uri: imageUri, name: 'photo.jpg', type: 'image/jpeg' } as any);
         const { data } = await mediaApi.upload(form);
         imageUrls = [data.url];
-      }
-      const addr = await reverseGeocode(pinLat, pinLng);
-      const form = new FormData();
-      form.append('name', name);
-      form.append('category', 'other');
-      form.append('lat', String(pinLat));
-      form.append('lng', String(pinLng));
-      form.append('address', addr);
-      form.append('reported_hours', `${openTime} – ${closeTime}`);
-      form.append('status', 'open');
-      imageUrls.forEach(u => form.append('image_urls', u));
-      await placesApi.create(form);
+      };
+
+      const [addr] = await Promise.all([
+        reverseGeocode(pinLat, pinLng),
+        uploadPromise()
+      ]);
+
+      const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const payload = {
+        name,
+        category,
+        lat: pinLat,
+        lng: pinLng,
+        address: addr,
+        reported_hours: `${formatTime(openTime)} – ${formatTime(closeTime)}`,
+        status: 'open',
+        image_urls: imageUrls,
+      };
+
+      const { data } = await placesApi.create(payload);
       // Refresh the places store so the new pin appears on Home/Search maps
       await fetchNearby();
+      // Fetch latest user data so Trust Score points are updated!
+      await restoreSession();
+      usePlacesStore.getState().setSelectedPlace(data as any);
       setDone(true);
-    } catch {
-      // Show success screen even on error (demo behaviour preserved)
-      setDone(true);
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e.message ?? 'Something went wrong';
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }
@@ -165,6 +209,24 @@ export default function AddPlaceScreen() {
             </View>
           </View>
 
+          {/* ── Category ── */}
+          <View style={styles.section}>
+            <Text style={styles.label}>Category</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {['cafe', 'restaurant', 'bar', 'pharmacy', 'convenience_store', 'other'].map(cat => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.catChip, category === cat && styles.catChipActive]}
+                  onPress={() => setCategory(cat)}
+                >
+                  <Text style={[styles.catChipText, category === cat && styles.catChipTextActive]}>
+                    {cat.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
           {/* ── Location Selection ── */}
           <View style={styles.section}>
             <Text style={styles.label}>Location Selection</Text>
@@ -188,7 +250,21 @@ export default function AddPlaceScreen() {
                 <Marker coordinate={{ latitude: pinLat, longitude: pinLng }} />
               </MapView>
               {/* Location button overlay */}
-              <TouchableOpacity style={styles.locBtn}>
+              <TouchableOpacity 
+                style={styles.locBtn}
+                onPress={() => {
+                  if (lat && lng) {
+                    setPinLat(lat);
+                    setPinLng(lng);
+                    mapRef.current?.animateToRegion({
+                      latitude: lat,
+                      longitude: lng,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }, 400);
+                  }
+                }}
+              >
                 <Ionicons name="locate" size={18} color="#7E3BED" />
               </TouchableOpacity>
             </View>
@@ -198,31 +274,45 @@ export default function AddPlaceScreen() {
           <View style={styles.timeRow}>
             <View style={styles.timeField}>
               <Text style={styles.label}>Open Time</Text>
-              <View style={styles.timeBox}>
+              <TouchableOpacity style={styles.timeBox} onPress={() => setShowOpen(true)}>
                 <Ionicons name="time-outline" size={16} color="rgba(44,44,44,0.5)" />
-                <TextInput
-                  style={styles.timeText}
-                  value={openTime}
-                  onChangeText={setOpenTime}
-                  placeholder="09:00 PM"
-                  placeholderTextColor="rgba(44,44,44,0.4)"
-                />
+                <Text style={styles.timeText}>
+                  {openTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
                 <Ionicons name="chevron-down" size={14} color="rgba(44,44,44,0.4)" />
-              </View>
+              </TouchableOpacity>
+              {showOpen && (
+                <DateTimePicker
+                  value={openTime}
+                  mode="time"
+                  display="default"
+                  onChange={(e, date) => {
+                    setShowOpen(Platform.OS === 'ios');
+                    if (date) setOpenTime(date);
+                  }}
+                />
+              )}
             </View>
             <View style={styles.timeField}>
               <Text style={styles.label}>Close Time</Text>
-              <View style={styles.timeBox}>
+              <TouchableOpacity style={styles.timeBox} onPress={() => setShowClose(true)}>
                 <Ionicons name="time-outline" size={16} color="rgba(44,44,44,0.5)" />
-                <TextInput
-                  style={styles.timeText}
-                  value={closeTime}
-                  onChangeText={setCloseTime}
-                  placeholder="04:00 AM"
-                  placeholderTextColor="rgba(44,44,44,0.4)"
-                />
+                <Text style={styles.timeText}>
+                  {closeTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
                 <Ionicons name="chevron-down" size={14} color="rgba(44,44,44,0.4)" />
-              </View>
+              </TouchableOpacity>
+              {showClose && (
+                <DateTimePicker
+                  value={closeTime}
+                  mode="time"
+                  display="default"
+                  onChange={(e, date) => {
+                    setShowClose(Platform.OS === 'ios');
+                    if (date) setCloseTime(date);
+                  }}
+                />
+              )}
             </View>
           </View>
 
@@ -240,6 +330,14 @@ export default function AddPlaceScreen() {
           <View style={{ height: 32 }} />
         </ScrollView>
       </SafeAreaView>
+
+      {/* Loading Overlay */}
+      {loading && (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color="#C6FF34" />
+          <Text style={styles.loadingText}>Saving Place...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -437,4 +535,40 @@ const styles = StyleSheet.create({
   },
   submitBtn: { marginTop: 12 },
   btnDisabled: { opacity: 0.5 },
+
+  // Loading overlay
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  loadingText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginTop: 16,
+  },
+  catChip: {
+    backgroundColor: '#1E1E1E',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  catChipActive: {
+    backgroundColor: '#7E3BED',
+    borderColor: '#7E3BED',
+  },
+  catChipText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  catChipTextActive: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter_600SemiBold',
+  },
 });

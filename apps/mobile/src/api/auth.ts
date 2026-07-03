@@ -19,4 +19,17 @@ export const authApi = {
 
   saveFcmToken: (fcm_token: string) =>
     api.post('/api/auth/fcm-token', { fcm_token }),
+
+  sendOtp: (phone: string) =>
+    api.post('/api/auth/otp/send', { phone }),
+
+  verifyOtp: (phone: string, code: string) =>
+    api.post<{ registered: boolean; tokens: (AuthTokens & { user: User }) | null }>('/api/auth/otp/verify', { phone, code }),
+
+  loginWithGoogle: (idToken: string, accessToken?: string) =>
+    api.post<AuthTokens & { user: User; is_new_user: boolean }>('/api/auth/google', {
+      id_token: idToken ?? '',
+      access_token: accessToken ?? '',
+    }),
 };
+

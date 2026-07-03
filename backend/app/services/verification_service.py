@@ -12,6 +12,7 @@ def submit_verification(
     user: User,
     status: str,
     note: str | None = None,
+    image_url: str | None = None,
 ) -> dict:
     place = db.query(Place).filter(Place.id == place_id, Place.is_active == True).first()
     if not place:
@@ -35,6 +36,7 @@ def submit_verification(
         user_id=user.id,
         status=status,
         note=note,
+        image_url=image_url,
     )
     db.add(verification)
 

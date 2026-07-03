@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../src/hooks/useAuth';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
+
+WebBrowser.maybeCompleteAuthSession();
 
 // Screen 2 — Phone number entry
 // "What's your number?" — India flag + +91 + phone input
@@ -15,13 +22,79 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { sendOtp, loginGoogle } = useAuth();
   const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const canContinue = phone.trim().length >= 7;
+  const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'dummy_id_waiting_for_user';
+  
+  // Explicitly set the redirect URI so Google accepts it.
+  // On web (browser testing) → http://localhost:8081 (must match Google Console exactly)
+  // On native → uses the app scheme lnc://
+  const redirectUri = Platform.OS === 'web'
+    ? 'http://localhost:8081'
+    : makeRedirectUri({ scheme: 'lnc', path: 'google-auth' });
 
-  const handleContinue = () => {
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: clientId,
+    iosClientId: clientId,
+    androidClientId: clientId,
+    redirectUri,
+  });
+
+  // Handle Google Auth Response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication } = response;
+      // Web flow gives access_token; native flow gives idToken
+      const idToken = authentication?.idToken ?? '';
+      const accessToken = authentication?.accessToken ?? '';
+
+      if (!idToken && !accessToken) {
+        Alert.alert('Google Auth Error', 'No token received from Google.');
+        return;
+      }
+
+      setLoading(true);
+      loginGoogle(idToken, accessToken)
+        .then(({ isNewUser }) => {
+          // New users see welcome screen; returning users go straight to home
+          router.replace(isNewUser ? '/(auth)/welcome' : '/(tabs)');
+        })
+        .catch((e: any) => {
+          Alert.alert('Google Auth Error', e?.response?.data?.detail ?? e.message);
+          setLoading(false);
+        });
+    } else if (response?.type === 'error') {
+      Alert.alert('Google Auth Error', response.error?.message ?? 'Login failed');
+    }
+  }, [response]);
+
+  const canContinue = phone.trim().length >= 7 && !loading;
+
+  const handleContinue = async () => {
     if (!canContinue) return;
-    router.push({ pathname: '/(auth)/otp', params: { phone: `+91${phone.trim()}` } });
+    setLoading(true);
+    const fullPhone = `+91${phone.trim()}`;
+    try {
+      await sendOtp(fullPhone);
+      router.push({ pathname: '/(auth)/otp', params: { phone: fullPhone } });
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'Failed to send OTP. Please check your connection.';
+      Alert.alert('OTP Failed', msg);
+      // For developer testing fallback, let them proceed anyway
+      router.push({ pathname: '/(auth)/otp', params: { phone: fullPhone } });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!request) {
+      Alert.alert('Error', 'Google Login is not fully initialized yet.');
+      return;
+    }
+    promptAsync();
   };
 
   return (
@@ -71,6 +144,7 @@ export default function LoginScreen() {
                   value={phone}
                   onChangeText={setPhone}
                   maxLength={10}
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -82,12 +156,16 @@ export default function LoginScreen() {
               disabled={!canContinue}
               activeOpacity={0.85}
             >
-              <Text style={styles.btnText}>Continue</Text>
+              {loading ? (
+                <ActivityIndicator color="#2C2C2C" />
+              ) : (
+                <Text style={styles.btnText}>Continue</Text>
+              )}
             </TouchableOpacity>
 
             {/* Social login */}
             <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialBtn}>
+              <TouchableOpacity style={styles.socialBtn} onPress={handleGoogleLogin} disabled={loading}>
                 <Text style={styles.socialG}>G</Text>
               </TouchableOpacity>
               {/* <TouchableOpacity style={styles.socialBtn}>
@@ -108,6 +186,7 @@ export default function LoginScreen() {
           <View style={styles.dot} />
         </View>
       </SafeAreaView>
+
     </View>
   );
 }

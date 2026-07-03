@@ -17,7 +17,7 @@ export default function ProfileScreen() {
   const { user: realUser, isAuthenticated: realAuth, logout } = useAuth();
 
   // ── DEV MOCK — remove when backend auth is working ────────────────────────
-  const DEV_MOCK = true; // set to false to use real auth
+  const DEV_MOCK = false; // set to false to use real auth
   const isAuthenticated = DEV_MOCK ? true : realAuth;
   const user = DEV_MOCK ? {
     id: 'dev-1',
@@ -25,9 +25,11 @@ export default function ProfileScreen() {
     email: 'dev@lnc.app',
     contribution_count: 23,
     verification_count: 7,
+    points: 2000,
     created_at: new Date().toISOString(),
   } : realUser;
   // ─────────────────────────────────────────────────────────────────────────
+
 
   // ── Not logged in ──────────────────────────────────────────────────────────
   if (!isAuthenticated) {
@@ -112,7 +114,9 @@ export default function ProfileScreen() {
                 <Text style={styles.statLabel}>Verified Places</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>2000</Text>
+                <Text style={styles.statValue}>
+                  {String(user?.points ?? 0).padStart(2, '0')}
+                </Text>
                 <Text style={styles.statLabel}>Trust Score</Text>
               </View>
             </View>

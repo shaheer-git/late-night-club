@@ -21,7 +21,7 @@ Community-powered app showing which places are **actually open late at night** â
 | Cache     | Redis |
 | Jobs      | Celery |
 | Auth      | JWT |
-| Storage   | Cloudflare R2 (free tier) |
+| Storage   | Cloudinary (free tier) |
 
 ---
 

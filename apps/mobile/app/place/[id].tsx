@@ -1,28 +1,68 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Image, Alert, Linking,
+  Image, Alert, Linking, TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetView, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import * as ImagePicker from 'expo-image-picker';
+import ImageViewing from 'react-native-image-viewing';
+import { Ionicons } from '@expo/vector-icons';
 import { placesApi } from '../../src/api/places';
 import { verificationsApi } from '../../src/api/verifications';
 import { useAuthStore } from '../../src/store/authStore';
 import { Place } from '../../src/types';
 import StatusBadge from '../../src/components/place/StatusBadge';
 import { timeAgo } from '../../src/utils/formatTime';
-import { formatDistance } from '../../src/utils/formatDistance';
+import { formatDistance, calculateDistance } from '../../src/utils/formatDistance';
+import { useLocationStore } from '../../src/store/locationStore';
 
 export default function PlaceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const { lat: userLat, lng: userLng } = useLocationStore();
   const [place, setPlace] = useState<Place | null>(null);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
+  const [verifyNote, setVerifyNote] = useState('');
+  const [verifyImage, setVerifyImage] = useState<string | null>(null);
+  const [viewerImages, setViewerImages] = useState<{uri: string}[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerVisible, setViewerVisible] = useState(false);
   const sheetRef = useRef<BottomSheet>(null);
+
+  const openImageViewer = (urls: string[], index = 0) => {
+    setViewerImages(urls.map(u => ({ uri: u })));
+    setViewerIndex(index);
+    setViewerVisible(true);
+  };
+
+  const pickVerifyImage = () => {
+    Alert.alert('Upload Photo', 'Choose an option', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Take Photo', onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') return Alert.alert('Permission needed', 'Camera permission is required');
+          const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            quality: 0.8,
+          });
+          if (!result.canceled) setVerifyImage(result.assets[0].uri);
+      }},
+      { text: 'Choose from Library', onPress: async () => {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') return Alert.alert('Permission needed', 'Media permission is required');
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.8,
+          });
+          if (!result.canceled) setVerifyImage(result.assets[0].uri);
+      }}
+    ]);
+  };
 
   useEffect(() => {
     fetchPlace();
@@ -53,7 +93,14 @@ export default function PlaceDetailScreen() {
     if (!isAuthenticated) { router.push('/(auth)/login'); return; }
     setVerifying(true);
     try {
-      await verificationsApi.submit({ place_id: id, status });
+      await verificationsApi.submit({ 
+        place_id: id, 
+        status,
+        note: verifyNote.trim() || undefined,
+        imageUri: verifyImage || undefined,
+      });
+      setVerifyNote('');
+      setVerifyImage(null);
       await fetchPlace();
       sheetRef.current?.close();
     } catch {}
@@ -101,14 +148,22 @@ export default function PlaceDetailScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Hero image */}
-          <View className="w-full h-[220px] bg-[#333]">
+          <TouchableOpacity 
+            className="w-full h-[220px] bg-[#333]" 
+            activeOpacity={0.9}
+            onPress={() => {
+              if (place.image_urls?.length) {
+                openImageViewer(place.image_urls, 0);
+              }
+            }}
+          >
             {place.image_urls?.[0]
               ? <Image source={{ uri: place.image_urls[0] }} className="w-full h-full" resizeMode="cover" />
               : <View className="flex-1 items-center justify-center">
                   <Text className="text-[64px]">🏪</Text>
                 </View>
             }
-          </View>
+          </TouchableOpacity>
 
           <View className="px-6 pt-5 gap-5">
             {/* Name + category */}
@@ -139,11 +194,15 @@ export default function PlaceDetailScreen() {
                   <Text className="font-regular text-[14px] text-white/80">{place.reported_hours}</Text>
                 </View>
               )}
-              {place.distance != null && (
+              {(place.distance != null || (userLat && userLng)) && (
                 <View className="flex-row gap-3 items-center">
                   <Text className="text-[16px]">📏</Text>
                   <Text className="font-regular text-[14px] text-white/80">
-                    {formatDistance(place.distance)} away
+                    {formatDistance(
+                      place.distance != null
+                        ? place.distance
+                        : calculateDistance(userLat!, userLng!, place.lat, place.lng)
+                    )} away
                   </Text>
                 </View>
               )}
@@ -154,7 +213,7 @@ export default function PlaceDetailScreen() {
               <View className="flex-row items-center justify-between">
                 <Text className="font-semibold text-[15px] text-white">Community Verifications</Text>
                 <View className="bg-purple/20 rounded-full px-3 py-1">
-                  <Text className="font-semibold text-[13px] text-purple">
+                  <Text className="font-semibold text-[13px] text-white">
                     {place.verification_count}
                   </Text>
                 </View>
@@ -166,20 +225,35 @@ export default function PlaceDetailScreen() {
                   {place.last_verified_at && ` · ${timeAgo(place.last_verified_at)}`}
                 </Text>
               )}
-              {place.recent_verifications?.slice(0, 3).map(v => (
-                <View key={v.id} className="flex-row items-center gap-2 py-1">
-                  <View className="w-6 h-6 rounded-full bg-white/20 items-center justify-center">
-                    <Text className="text-[10px] text-white font-semibold">
-                      {v.user_name?.[0]?.toUpperCase()}
+              {place.recent_verifications?.slice(0, 5).map(v => (
+                <View key={v.id} className="py-2 border-b border-white/5">
+                  <View className="flex-row items-center gap-2 mb-1">
+                    <View className="w-6 h-6 rounded-full bg-white/20 items-center justify-center">
+                      <Text className="text-[10px] text-white font-semibold">
+                        {v.user_name?.[0]?.toUpperCase() || '?'}
+                      </Text>
+                    </View>
+                    <Text className="font-regular text-[13px] text-white/70 flex-1">
+                      {v.user_name || 'Someone'} marked{' '}
+                      <Text className={v.status === 'open' ? 'text-status-open' : 'text-status-closed'}>
+                        {v.status === 'open' ? 'Open' : 'Closed'}
+                      </Text>
                     </Text>
+                    <Text className="font-regular text-[11px] text-white/40">{timeAgo(v.created_at)}</Text>
                   </View>
-                  <Text className="font-regular text-[13px] text-white/70 flex-1">
-                    {v.user_name} marked{' '}
-                    <Text className={v.status === 'open' ? 'text-status-open' : 'text-status-closed'}>
-                      {v.status}
+                  {v.note && (
+                    <Text className="font-regular text-[13px] text-white/90 mt-1 pl-8">
+                      "{v.note}"
                     </Text>
-                  </Text>
-                  <Text className="font-regular text-[11px] text-white/40">{timeAgo(v.created_at)}</Text>
+                  )}
+                  {v.image_url && (
+                    <TouchableOpacity 
+                      className="ml-8 mt-2 w-24 h-24 rounded-lg overflow-hidden border border-white/10"
+                      onPress={() => openImageViewer([v.image_url!], 0)}
+                    >
+                      <Image source={{ uri: v.image_url }} className="w-full h-full" resizeMode="cover" />
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
             </View>
@@ -216,36 +290,79 @@ export default function PlaceDetailScreen() {
       <BottomSheet
         ref={sheetRef}
         index={-1}
-        snapPoints={['35%']}
+        snapPoints={['55%', '85%']}
         enablePanDownToClose
-        backgroundStyle={{ backgroundColor: '#2C2C2C' }}
+        backgroundStyle={{ backgroundColor: '#1A1A1A' }}
         handleIndicatorStyle={{ backgroundColor: 'rgba(255,255,255,0.3)' }}
       >
-        <BottomSheetView className="px-6 pt-4 gap-4">
-          <Text className="font-semibold text-[18px] text-white text-center">
-            Is this place open right now?
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40, paddingTop: 16, gap: 20 }}>
+          <Text className="font-bold text-[22px] text-white text-center tracking-tight">
+            Verify Status
           </Text>
-          <View className="flex-row gap-3">
+          
+          <Text className="font-regular text-[14px] text-white/60 text-center -mt-2">
+            Is this place currently open or closed?
+          </Text>
+
+          {/* Note Input */}
+          <View className="gap-2">
+            <Text className="font-semibold text-[14px] text-white/80">Add a note (optional)</Text>
+            <View className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 min-h-[80px]">
+              <TextInput
+                className="text-white text-[15px] p-0 flex-1"
+                placeholder="e.g. They are closing in 10 mins"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                multiline
+                value={verifyNote}
+                onChangeText={setVerifyNote}
+              />
+            </View>
+          </View>
+
+          {/* Photo Upload */}
+          <View className="gap-2">
+            <Text className="font-semibold text-[14px] text-white/80">Photo proof (optional)</Text>
+            <TouchableOpacity 
+              className="bg-white/5 border border-white/10 border-dashed rounded-xl h-[100px] items-center justify-center overflow-hidden"
+              onPress={pickVerifyImage}
+            >
+              {verifyImage ? (
+                <Image source={{ uri: verifyImage }} className="w-full h-full" resizeMode="cover" />
+              ) : (
+                <View className="items-center gap-2">
+                  <Ionicons name="camera-outline" size={28} color="rgba(255,255,255,0.5)" />
+                  <Text className="text-white/50 text-[13px]">Tap to upload photo</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Submit buttons */}
+          <View className="flex-row gap-3 mt-2">
             <TouchableOpacity
-              className={`flex-1 h-[56px] bg-status-open/20 border border-status-open rounded-xl items-center justify-center ${verifying ? 'opacity-50' : ''}`}
+              className={`flex-1 h-[56px] bg-status-open/10 border border-status-open/30 rounded-xl items-center justify-center ${verifying ? 'opacity-50' : ''}`}
               onPress={() => handleVerify('open')}
               disabled={verifying}
             >
               <Text className="font-semibold text-[16px] text-status-open">🟢 Yes, Open</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className={`flex-1 h-[56px] bg-status-closed/20 border border-status-closed rounded-xl items-center justify-center ${verifying ? 'opacity-50' : ''}`}
+              className={`flex-1 h-[56px] bg-status-closed/10 border border-status-closed/30 rounded-xl items-center justify-center ${verifying ? 'opacity-50' : ''}`}
               onPress={() => handleVerify('closed')}
               disabled={verifying}
             >
               <Text className="font-semibold text-[16px] text-status-closed">🔴 No, Closed</Text>
             </TouchableOpacity>
           </View>
-          <Text className="font-regular text-[12px] text-white/40 text-center">
-            Your verification helps the community. Only verify if you're physically present.
-          </Text>
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheet>
+
+      <ImageViewing
+        images={viewerImages}
+        imageIndex={viewerIndex}
+        visible={viewerVisible}
+        onRequestClose={() => setViewerVisible(false)}
+      />
     </View>
   );
 }

@@ -5,6 +5,7 @@ export interface User {
   avatar_url?: string;
   contribution_count: number;
   verification_count: number;
+  points: number;
   created_at: string;
 }
 

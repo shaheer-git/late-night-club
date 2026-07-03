@@ -1,0 +1,19 @@
+"""add image_url to verifications
+
+Revision ID: 002
+Revises: 001
+Create Date: 2026-07-03
+"""
+from alembic import op
+import sqlalchemy as sa
+
+revision = "002"
+down_revision = "001"
+branch_labels = None
+depends_on = None
+
+def upgrade():
+    op.add_column("verifications", sa.Column("image_url", sa.String(500), nullable=True))
+
+def downgrade():
+    op.drop_column("verifications", "image_url")

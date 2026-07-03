@@ -21,11 +21,12 @@ def login_user(db: Session, email: str, password: str) -> User:
     return user
 
 
-def make_tokens(user: User) -> dict:
+def make_tokens(user: User, is_new_user: bool = False) -> dict:
     data = {"sub": str(user.id)}
     return {
         "access_token": create_access_token(data),
         "refresh_token": create_refresh_token(data),
         "token_type": "bearer",
         "user": user,
+        "is_new_user": is_new_user,
     }

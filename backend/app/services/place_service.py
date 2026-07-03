@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from geoalchemy2.functions import ST_DWithin, ST_Distance, ST_MakePoint, ST_SetSRID, ST_X, ST_Y
+from geoalchemy2.types import Geography
 from fastapi import HTTPException
 from typing import Optional
 from ..models.place import Place, PlaceStatus, PlaceCategory
@@ -8,7 +9,8 @@ from ..models.user import User
 
 
 def _user_point(lng: float, lat: float):
-    return ST_SetSRID(ST_MakePoint(lng, lat), 4326)
+    # Cast to Geography to ensure calculations are in meters
+    return func.cast(ST_SetSRID(ST_MakePoint(lng, lat), 4326), Geography)
 
 
 def _attach_coords(db: Session, place: Place) -> Place:
@@ -40,7 +42,7 @@ def get_nearby_places(
 
     query = db.query(Place).filter(
         Place.is_active == True,
-        ST_DWithin(Place.location, user_point, radius_meters),
+        ST_DWithin(func.cast(Place.location, Geography), user_point, radius_meters),
     )
 
     if status:
@@ -48,13 +50,14 @@ def get_nearby_places(
     if category:
         query = query.filter(Place.category == category)
 
-    query = query.order_by(ST_Distance(Place.location, user_point))
+    query = query.order_by(ST_Distance(func.cast(Place.location, Geography), user_point))
 
     total = query.count()
     places = query.offset(offset).limit(limit).all()
 
     for place in places:
-        place.distance = db.scalar(ST_Distance(place.location, user_point))
+        dist_query = db.query(ST_Distance(func.cast(Place.location, Geography), user_point)).filter(Place.id == place.id)
+        place.distance = db.scalar(dist_query)
         _attach_coords(db, place)
 
     return {"total": total, "items": places}
@@ -76,12 +79,13 @@ def search_places(db: Session, q: str, lat: float, lng: float, limit: int = 20) 
             Place.name.ilike(f"%{q}%"),
             Place.address.ilike(f"%{q}%"),
         ),
-    ).order_by(ST_Distance(Place.location, user_point))
+    ).order_by(ST_Distance(func.cast(Place.location, Geography), user_point))
 
     total = query.count()
     places = query.limit(limit).all()
     for place in places:
-        place.distance = db.scalar(ST_Distance(place.location, user_point))
+        dist_query = db.query(ST_Distance(func.cast(Place.location, Geography), user_point)).filter(Place.id == place.id)
+        place.distance = db.scalar(dist_query)
         _attach_coords(db, place)
 
     return {"total": total, "items": places}
@@ -97,6 +101,7 @@ def create_place(db: Session, data: dict, user: User) -> Place:
     )
     db.add(place)
     user.contribution_count += 1
+    user.points += 20
     db.commit()
     db.refresh(place)
     _attach_coords(db, place)

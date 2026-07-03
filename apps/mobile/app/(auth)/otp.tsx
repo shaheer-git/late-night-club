@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Image, KeyboardAvoidingView, Platform,
+  StyleSheet, Image, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +16,7 @@ import { useAuth } from '../../src/hooks/useAuth';
 export default function OTPScreen() {
   const router = useRouter();
   const { phone } = useLocalSearchParams<{ phone: string }>();
-  const { login } = useAuth();
+  const { verifyOtp } = useAuth();
 
   const [otp, setOtp] = useState(['', '', '', '']);
   const [loading, setLoading] = useState(false);
@@ -47,16 +47,22 @@ export default function OTPScreen() {
     if (!isComplete) return;
     setLoading(true);
     try {
-      await login(`${phone}@lnc.app`, otp.join(''));
-      // Existing user — go to welcome/home
-      router.replace('/(auth)/welcome');
-    } catch {
-      // New user — collect name
-      router.push({ pathname: '/(auth)/register', params: { phone, otp: otp.join('') } });
+      const { registered } = await verifyOtp(phone, otp.join(''));
+      if (registered) {
+        // Returning user — go straight to home, skip welcome screen
+        router.replace('/(tabs)');
+      } else {
+        // New user — collect their name first
+        router.push({ pathname: '/(auth)/register', params: { phone, otp: otp.join('') } });
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e.message ?? 'Invalid or expired OTP. Please try again.';
+      Alert.alert('Verification Failed', msg);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <View style={styles.screen}>

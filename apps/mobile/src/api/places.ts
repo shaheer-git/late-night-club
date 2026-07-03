@@ -13,10 +13,8 @@ export const placesApi = {
   search: (q: string, lat: number, lng: number) =>
     api.get<PlacesResponse>('/api/places/search', { params: { q, lat, lng } }),
 
-  create: (data: FormData) =>
-    api.post<Place>('/api/places', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  create: (data: Partial<Place>) =>
+    api.post<Place>('/api/places', data),
 
   update: (id: string, data: Partial<Place>) =>
     api.patch<Place>(`/api/places/${id}`, data),

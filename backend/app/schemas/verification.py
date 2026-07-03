@@ -15,6 +15,7 @@ class VerificationResponse(BaseModel):
     user_id: UUID4
     status: str
     note: Optional[str]
+    image_url: Optional[str] = None
     created_at: datetime
 
     class Config:

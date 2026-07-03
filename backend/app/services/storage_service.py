@@ -1,35 +1,35 @@
-import boto3
+import cloudinary
+import cloudinary.uploader
 import uuid
 from fastapi import UploadFile, HTTPException
 from ..config import settings
 
-
-def get_s3_client():
-    if not settings.R2_ACCESS_KEY_ID:
-        return None
-    return boto3.client(
-        "s3",
-        endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
-        aws_access_key_id=settings.R2_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
-        region_name="auto",
+# Configure Cloudinary if keys are set
+if settings.CLOUDINARY_CLOUD_NAME:
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+        api_key=settings.CLOUDINARY_API_KEY,
+        api_secret=settings.CLOUDINARY_API_SECRET,
+        secure=True,
     )
 
 
 async def upload_file(file: UploadFile) -> str:
-    client = get_s3_client()
-    if not client:
-        raise HTTPException(status_code=503, detail="Storage not configured")
+    if not settings.CLOUDINARY_CLOUD_NAME:
+        # Development fallback: return a placeholder cafe image url for ease of testing
+        return "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&auto=format&fit=crop"
 
-    ext = file.filename.split(".")[-1] if file.filename else "jpg"
-    key = f"uploads/{uuid.uuid4()}.{ext}"
-    content = await file.read()
+    try:
+        content = await file.read()
+        response = cloudinary.uploader.upload(
+            content,
+            folder="late_night_club",
+            resource_type="auto",
+        )
+        url = response.get("secure_url")
+        if not url:
+            raise HTTPException(status_code=500, detail="Cloudinary upload response did not return a secure_url")
+        return url
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cloudinary upload failed: {str(e)}")
 
-    client.put_object(
-        Bucket=settings.R2_BUCKET_NAME,
-        Key=key,
-        Body=content,
-        ContentType=file.content_type or "image/jpeg",
-    )
-
-    return f"{settings.R2_PUBLIC_URL}/{key}"

@@ -15,9 +15,11 @@ const setToken = async (key: string, value: string): Promise<void> => {
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 });
+
+console.log('==== DEBUG: Axios API_URL is set to:', API_URL, '====');
 
 api.interceptors.request.use(async (config) => {
   const token = await getToken('access_token');

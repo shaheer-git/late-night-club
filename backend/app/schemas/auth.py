@@ -18,6 +18,7 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
+    is_new_user: bool = False
 
 
 class RefreshRequest(BaseModel):
@@ -26,3 +27,23 @@ class RefreshRequest(BaseModel):
 
 class FcmTokenRequest(BaseModel):
     fcm_token: str
+
+
+class OtpSendRequest(BaseModel):
+    phone: str
+
+
+class OtpVerifyRequest(BaseModel):
+    phone: str
+    code: str
+
+
+class OtpVerifyResponse(BaseModel):
+    registered: bool
+    tokens: TokenResponse | None = None
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str = ""
+    access_token: str = ""
+

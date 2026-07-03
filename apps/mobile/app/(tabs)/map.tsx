@@ -16,18 +16,20 @@ import { useMapStore } from '../../src/store/mapStore';
 import CustomMarker from '../../src/components/map/CustomMarker';
 import { formatDistance, formatDuration } from '../../src/utils/formatDistance';
 import { getRoute } from '../../src/utils/routing';
+import { isPlaceOpen } from '../../src/utils/checkOpenStatus';
 import { timeAgo } from '../../src/utils/formatTime';
-import { DUMMY_PLACES } from '../../src/data/dummyPlaces';
+import { placesApi } from '../../src/api/places';
 import { Place } from '../../src/types';
 
 const { height } = Dimensions.get('window');
 
 const FILTER_CHIPS = [
-  { label: 'Cafe',              value: 'cafe' },
-  { label: 'Recently verified', value: 'recent' },
-  { label: 'Road Side Shop',    value: 'roadside' },
-  { label: 'Nearby',            value: 'nearby' },
-  { label: 'Food',              value: 'food' },
+  { label: 'Cafe', value: 'cafe' },
+  { label: 'Restaurant', value: 'restaurant' },
+  { label: 'Bar', value: 'bar' },
+  { label: 'Pharmacy', value: 'pharmacy' },
+  { label: 'Convenience Store', value: 'convenience_store' },
+  { label: 'Other', value: 'other' },
 ];
 
 function openNativeNavigation(toLat: number, toLng: number) {
@@ -58,16 +60,36 @@ export default function SearchScreen() {
   const mapRef = useRef<MapView>(null);
   const searchRef = useRef<TextInput>(null);
 
-  const places = apiPlaces.length > 0 ? apiPlaces : DUMMY_PLACES;
+  const places = apiPlaces;
 
   const [drawer, setDrawer] = useState<DrawerState>('collapsed');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Place[] | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [showChips, setShowChips] = useState(true);
 
   useEffect(() => {
     if (lat && lng) fetchNearby();
   }, [lat, lng]);
+
+  // Debounced API search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      if (!lat || !lng) return;
+      try {
+        const { data } = await placesApi.search(searchQuery, lat, lng);
+        const unique = data.items.filter((p, i, self) => self.findIndex(x => x.id === p.id) === i);
+        setSearchResults(unique);
+      } catch (e) {
+        console.warn('Search error', e);
+      }
+    }, 600); // 600ms debounce
+    return () => clearTimeout(timer);
+  }, [searchQuery, lat, lng]);
 
   const handleMarkerPress = (place: Place) => {
     setSelectedPlace(place);
@@ -97,12 +119,9 @@ export default function SearchScreen() {
     openNativeNavigation(place.lat, place.lng);
   };
 
-  const filteredPlaces = places.filter(p => {
-    const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = !activeFilter || p.category === activeFilter ||
-      (activeFilter === 'recent' && p.last_verified_at) ||
-      (activeFilter === 'nearby' && (p.distance ?? 9999) < 1500);
-    return matchesSearch && matchesFilter;
+  const dataSource = searchResults || places;
+  const filteredPlaces = dataSource.filter(p => {
+    return !activeFilter || p.category === activeFilter;
   });
 
   return (
@@ -133,7 +152,6 @@ export default function SearchScreen() {
             key={place.id}
             coordinate={{ latitude: place.lat, longitude: place.lng }}
             onPress={() => handleMarkerPress(place)}
-            tracksViewChanges={false}
           >
             <CustomMarker
               status={place.status}
@@ -276,7 +294,7 @@ function SearchPlaceCard({
   onPress: () => void;
   onDirections: () => void;
 }) {
-  const isOpen = place.status === 'open';
+  const isOpen = isPlaceOpen(place.reported_hours) || place.status === 'open';
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.cardImg}>
@@ -403,11 +421,13 @@ const styles = StyleSheet.create({
     borderColor: '#C6FF34',
   },
 
-  chipsRow: { flexDirection: 'row', gap: 7, paddingHorizontal: 4 },
+  chipsRow: { flexDirection: 'row', gap: 7, paddingHorizontal: 4, flexGrow: 0, flexShrink: 0, paddingBottom: 14 },
   chip: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     paddingHorizontal: 6, paddingVertical: 4,
+    height: 28,
+    alignItems: 'center', justifyContent: 'center',
   },
   chipActive: { backgroundColor: '#C6FF34' },
   chipText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#2C2C2C' },

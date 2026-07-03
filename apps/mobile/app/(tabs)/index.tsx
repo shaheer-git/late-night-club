@@ -14,9 +14,9 @@ import { usePlacesStore } from '../../src/store/placesStore';
 import { useMapStore } from '../../src/store/mapStore';
 import CustomMarker from '../../src/components/map/CustomMarker';
 import { formatDistance, formatDuration } from '../../src/utils/formatDistance';
+import { isPlaceOpen } from '../../src/utils/checkOpenStatus';
 import { getRoute } from '../../src/utils/routing';
 import { timeAgo } from '../../src/utils/formatTime';
-import { DUMMY_PLACES } from '../../src/data/dummyPlaces';
 import { Place } from '../../src/types';
 
 const { width } = Dimensions.get('window');
@@ -51,12 +51,28 @@ export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
   const listRef = useRef<FlatList>(null);
 
-  // Use dummy data merged with any real API data
-  const places = apiPlaces.length > 0 ? apiPlaces : DUMMY_PLACES;
+  const places = apiPlaces;
 
   useEffect(() => {
     if (lat && lng) fetchNearby();
   }, [lat, lng]);
+
+  useEffect(() => {
+    if (selectedPlace && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: selectedPlace.lat,
+        longitude: selectedPlace.lng,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      }, 400);
+      setTimeout(() => {
+        const idx = places.findIndex(p => p.id === selectedPlace.id);
+        if (idx >= 0 && listRef.current) {
+          listRef.current.scrollToIndex({ index: idx, animated: true, viewPosition: 0 });
+        }
+      }, 100);
+    }
+  }, [selectedPlace, places]);
 
   const handleMarkerPress = (place: Place) => {
     setSelectedPlace(place);
@@ -117,7 +133,6 @@ export default function HomeScreen() {
             key={place.id}
             coordinate={{ latitude: place.lat, longitude: place.lng }}
             onPress={() => handleMarkerPress(place)}
-            tracksViewChanges={false}
           >
             <CustomMarker
               status={place.status}
@@ -149,6 +164,23 @@ export default function HomeScreen() {
           </View>
         </SafeAreaView>
       )}
+
+      {/* ── GPS Locate Me Button ── */}
+      <TouchableOpacity 
+        style={styles.gpsBtn} 
+        onPress={() => {
+          if (lat && lng) {
+            mapRef.current?.animateToRegion({
+              latitude: lat,
+              longitude: lng,
+              latitudeDelta: 0.04,
+              longitudeDelta: 0.04,
+            }, 400);
+          }
+        }}
+      >
+        <Ionicons name="locate" size={24} color="#7E3BED" />
+      </TouchableOpacity>
 
       {/* ── Place cards overlaid at bottom ──
           Figma: cards sit above the nav bar, horizontally scrollable
@@ -187,7 +219,7 @@ function PlaceCardOverlay({
   onPress: () => void;
   onDirections: () => void;
 }) {
-  const isOpen = place.status === 'open';
+  const isOpen = isPlaceOpen(place.reported_hours) || place.status === 'open';
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       {/* Thumbnail: 70×72, borderRadius 18 */}
@@ -283,6 +315,23 @@ const styles = StyleSheet.create({
     paddingLeft: CARD_MARGIN,
     paddingRight: CARD_MARGIN,
     gap: 12,
+  },
+  
+  gpsBtn: {
+    position: 'absolute',
+    right: 20,
+    bottom: 270,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
 
   // Card: 352×hug, white, borderRadius 28, border 1px #2C2C2C, padding 10 22 10 10

@@ -1,4 +1,4 @@
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
+export const API_URL = 'http://172.20.10.4:8000';
 export const APP_NAME = process.env.EXPO_PUBLIC_APP_NAME ?? 'Late Night Club';
 
 export const MAP_CONFIG = {

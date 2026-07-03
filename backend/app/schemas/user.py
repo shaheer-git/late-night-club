@@ -22,6 +22,7 @@ class UserResponse(UserBase):
     avatar_url: Optional[str]
     contribution_count: int
     verification_count: int
+    points: int
     created_at: datetime
 
     class Config:

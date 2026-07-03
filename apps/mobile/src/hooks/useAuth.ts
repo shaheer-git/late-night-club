@@ -24,6 +24,28 @@ export function useAuth() {
     setUser(data.user);
   };
 
+  const sendOtp = async (phone: string) => {
+    await authApi.sendOtp(phone);
+  };
+
+  const verifyOtp = async (phone: string, code: string) => {
+    const { data } = await authApi.verifyOtp(phone, code);
+    if (data.registered && data.tokens) {
+      await saveToken('access_token', data.tokens.access_token);
+      await saveToken('refresh_token', data.tokens.refresh_token);
+      setUser(data.tokens.user);
+    }
+    return { registered: data.registered };
+  };
+
+  const loginGoogle = async (idToken: string, accessToken?: string) => {
+    const { data } = await authApi.loginWithGoogle(idToken, accessToken);
+    await saveToken('access_token', data.access_token);
+    await saveToken('refresh_token', data.refresh_token);
+    setUser(data.user);
+    return { isNewUser: data.is_new_user ?? false };
+  };
+
   const register = async (name: string, email: string, password: string) => {
     const { data } = await authApi.register({ name, email, password });
     await saveToken('access_token', data.access_token);
@@ -48,5 +70,6 @@ export function useAuth() {
     }
   };
 
-  return { user, isAuthenticated, login, register, logout, restoreSession };
+  return { user, isAuthenticated, login, register, logout, restoreSession, sendOtp, verifyOtp, loginGoogle };
 }
+
