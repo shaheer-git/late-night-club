@@ -32,7 +32,7 @@ export default function MyContributionsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('added');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [addedPlaces, setAddedPlaces] = useState<Place[]>([]);
-  const [verifications, setVerifications] = useState<Verification[]>([]);
+  const [verifiedPlaces, setVerifiedPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -47,24 +47,13 @@ export default function MyContributionsScreen() {
         setAddedPlaces(data);
       } else {
         const { data } = await usersApi.getMyVerifications();
-        setVerifications(data);
+        setVerifiedPlaces(data);
       }
     } catch {}
     setLoading(false);
   };
 
-  const currentPlaces: Place[] = activeTab === 'added'
-    ? addedPlaces
-    : verifications.map(v => ({
-        id: v.place_id,
-        name: v.place_id,
-        category: 'other',
-        status: v.status,
-        image_urls: [],
-        verification_count: 0,
-        lat: 0,
-        lng: 0,
-      }));
+  const currentPlaces: Place[] = activeTab === 'added' ? addedPlaces : verifiedPlaces;
 
   const mapPlaces = currentPlaces.filter(p => p.lat !== 0 && p.lng !== 0);
 

@@ -52,6 +52,7 @@ export interface Verification {
   user_name: string;
   status: PlaceStatus;
   note?: string;
+  image_url?: string;
   created_at: string;
 }
 

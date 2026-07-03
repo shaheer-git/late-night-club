@@ -8,7 +8,7 @@ import * as Location from 'expo-location';
 import * as SecureStore from 'expo-secure-store';
 import { useLocationStore } from '../../src/store/locationStore';
 
-const ONBOARDING_KEY = 'lnc_onboarding_done';
+const ONBOARDING_KEY = 'lnc_onboarding_done_v2';
 
 export default function LocationPermissionScreen() {
   const router = useRouter();

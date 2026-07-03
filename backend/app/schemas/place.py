@@ -49,6 +49,7 @@ class VerificationItem(BaseModel):
     user_name: str
     status: str
     note: Optional[str]
+    image_url: Optional[str] = None
     created_at: datetime
 
     class Config:

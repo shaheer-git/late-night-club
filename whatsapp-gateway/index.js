@@ -22,6 +22,16 @@ client.on('qr', (qr) => {
     console.log('--------------------------------------------\n');
 });
 
+// Client is authenticated
+client.on('authenticated', () => {
+    console.log('✅ WhatsApp authenticated successfully!');
+});
+
+// Client auth failure
+client.on('auth_failure', (msg) => {
+    console.error('❌ WhatsApp authentication failed:', msg);
+});
+
 // Client is ready
 client.on('ready', () => {
     isReady = true;

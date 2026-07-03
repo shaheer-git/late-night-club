@@ -162,13 +162,14 @@ export default function AddPlaceScreen() {
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
 
-        {/* Back button */}
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Add Place</Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
         <ScrollView
           style={{ flex: 1 }}
@@ -402,14 +403,31 @@ const styles = StyleSheet.create({
   communityPoints: { fontFamily: 'Inter_700Bold', fontSize: 15, color: '#7E3BED' },
   doneBtnWrap: { paddingBottom: 16 },
 
-  // Back button
+  // ── Header ──
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
+  },
   backBtn: {
-    marginTop: 8,
-    marginLeft: 16,
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#3A3A3A',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 17,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
   },
 
   // Form

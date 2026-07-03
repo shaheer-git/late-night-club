@@ -4,10 +4,10 @@ from ..models.user import User
 from ..utils.security import hash_password, verify_password, create_access_token, create_refresh_token
 
 
-def register_user(db: Session, name: str, email: str, password: str) -> User:
+def register_user(db: Session, name: str, email: str, password: str, primary_city: str | None = None) -> User:
     if db.query(User).filter(User.email == email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
-    user = User(name=name, email=email, hashed_password=hash_password(password))
+    user = User(name=name, email=email, hashed_password=hash_password(password), primary_city=primary_city)
     db.add(user)
     db.commit()
     db.refresh(user)

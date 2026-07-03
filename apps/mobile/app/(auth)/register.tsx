@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/hooks/useAuth';
+import { useLocationStore } from '../../src/store/locationStore';
 import { RegisterIcon } from '../../src/components/icons/AuthIcons';
 
 // Screen 4 — Name collection (new users only)
@@ -19,6 +20,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { phone, otp } = useLocalSearchParams<{ phone: string; otp: string }>();
   const { register } = useAuth();
+  const { city } = useLocationStore();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -35,7 +37,7 @@ export default function RegisterScreen() {
       const email = phone
         ? `${phone.replace(/\D/g, '')}@lnc.app`
         : `${Date.now()}@lnc.app`;
-      await register(fullName, email, otp ?? '0000');
+      await register(fullName, email, otp ?? '0000', city || null);
       router.replace('/(auth)/welcome');
     } catch (e: any) {
       const msg = e?.response?.data?.detail ?? 'Registration failed. Please try again.';

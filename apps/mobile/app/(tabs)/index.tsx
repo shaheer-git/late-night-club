@@ -219,7 +219,9 @@ function PlaceCardOverlay({
   onPress: () => void;
   onDirections: () => void;
 }) {
-  const isOpen = isPlaceOpen(place.reported_hours) || place.status === 'open';
+  const isOpen = place.reported_hours 
+    ? isPlaceOpen(place.reported_hours) 
+    : place.status === 'open';
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       {/* Thumbnail: 70×72, borderRadius 18 */}
@@ -307,7 +309,7 @@ const styles = StyleSheet.create({
   // Cards container sits above the tab bar (bottom: 112 = tab bar height)
   cardsContainer: {
     position: 'absolute',
-    bottom: 135,
+    bottom: 160,
     left: 0,
     right: 0,
   },

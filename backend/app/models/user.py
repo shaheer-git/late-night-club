@@ -16,6 +16,7 @@ class User(Base):
     fcm_token = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    primary_city = Column(String(100), nullable=True)
     contribution_count = Column(Integer, default=0)
     verification_count = Column(Integer, default=0)
     points = Column(Integer, default=0)

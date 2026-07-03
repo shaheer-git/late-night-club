@@ -11,14 +11,48 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../src/hooks/useAuth';
+import { useState } from 'react';
+import { TextInput, Alert } from 'react-native';
+import { usersApi } from '../src/api/users';
+import { useAuthStore } from '../src/store/authStore';
 
 export default function ProfileSettingsScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { setUser } = useAuthStore();
+  
+  const [firstName, setFirstName] = useState(() => {
+    const parts = (user?.name ?? '').split(' ');
+    return parts[0] || '';
+  });
+  const [lastName, setLastName] = useState(() => {
+    const parts = (user?.name ?? '').split(' ');
+    return parts.slice(1).join(' ') || '';
+  });
+  const [saving, setSaving] = useState(false);
+
+  const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+  const hasChanges = fullName !== user?.name;
 
   const handleSignOut = async () => {
     await logout();
     router.replace('/(auth)/login');
+  };
+
+  const handleSave = async () => {
+    if (!firstName.trim()) return Alert.alert('Error', 'First Name cannot be empty');
+    setSaving(true);
+    try {
+      const { data } = await usersApi.updateMe({ name: fullName });
+      if (user) {
+        setUser({ ...user, name: data.name });
+      }
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -57,22 +91,46 @@ export default function ProfileSettingsScreen() {
           {/* Username */}
           <Text style={styles.username}>{user?.name ?? 'User'}</Text>
 
-          {/* Read-only fields */}
+          {/* Read-only fields / Edit fields */}
           <View style={styles.fieldsCard}>
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Name</Text>
-              <Text style={styles.fieldValue}>{user?.name ?? '—'}</Text>
+              <Text style={styles.fieldLabel}>First Name</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="First name"
+                placeholderTextColor="rgba(44,44,44,0.3)"
+              />
+            </View>
+            <View style={styles.fieldDivider} />
+            <View style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>Last Name</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Last name"
+                placeholderTextColor="rgba(44,44,44,0.3)"
+              />
             </View>
             <View style={styles.fieldDivider} />
             <View style={styles.fieldRow}>
               <Text style={styles.fieldLabel}>Phone</Text>
-              <Text style={styles.fieldValue}>+91 ••••••7890</Text>
+              <Text style={styles.fieldValue}>{user?.email?.replace('@lnc.app', '') ?? '—'}</Text>
             </View>
           </View>
 
-          {/* Save Changes (disabled / decorative) */}
-          <TouchableOpacity style={styles.btnDisabled} disabled activeOpacity={1}>
-            <Text style={styles.btnDisabledText}>Save Changes</Text>
+          {/* Save Changes */}
+          <TouchableOpacity
+            style={hasChanges ? styles.btnLime : styles.btnDisabled}
+            disabled={!hasChanges || saving}
+            activeOpacity={0.85}
+            onPress={handleSave}
+          >
+            <Text style={hasChanges ? styles.btnLimeText : styles.btnDisabledText}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Text>
           </TouchableOpacity>
 
           {/* Sign Out */}
@@ -190,6 +248,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#2C2C2C',
   },
+  fieldInput: {
+    flex: 1,
+    textAlign: 'right',
+    fontFamily: 'Inter_500Medium',
+    fontSize: 15,
+    color: '#2C2C2C',
+    padding: 0,
+    height: '100%',
+  },
   fieldDivider: {
     height: 1,
     backgroundColor: 'rgba(44,44,44,0.08)',
@@ -208,6 +275,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     fontSize: 18,
     color: 'rgba(44,44,44,0.5)',
+  },
+  btnLime: {
+    marginHorizontal: 20,
+    height: 68,
+    backgroundColor: '#C6FF34',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnLimeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+    color: '#2C2C2C',
   },
   btnOutline: {
     marginHorizontal: 20,

@@ -15,11 +15,13 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     avatar_url: Optional[str] = None
+    primary_city: Optional[str] = None
 
 
 class UserResponse(UserBase):
     id: UUID4
     avatar_url: Optional[str]
+    primary_city: Optional[str] = None
     contribution_count: int
     verification_count: int
     points: int

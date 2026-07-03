@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
 
-const ONBOARDING_KEY = 'lnc_onboarding_done';
+const ONBOARDING_KEY = 'lnc_onboarding_done_v2';
 
 export default function SplashScreen() {
   const router = useRouter();

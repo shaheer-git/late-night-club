@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/register", response_model=TokenResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
-    user = register_user(db, req.name, req.email, req.password)
+    user = register_user(db, req.name, req.email, req.password, req.primary_city)
     return make_tokens(user)
 
 

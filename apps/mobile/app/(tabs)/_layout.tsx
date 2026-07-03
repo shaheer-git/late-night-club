@@ -1,5 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import Animated, { LinearTransition, FadeIn, FadeOut, ZoomIn, ZoomOut, FadeInRight, FadeOutRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,11 +13,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Inactive: 64×64, same bg, borderRadius 100
 
 const TABS = [
-  { name: 'index',   label: 'Home',    icon: 'home',           iconActive: 'home' },
-  { name: 'map',     label: 'Search',  icon: 'search-outline', iconActive: 'search' },
-  { name: 'add',     label: 'Add',     icon: 'add-outline',    iconActive: 'add' },
-  { name: 'profile', label: 'Profile', icon: 'person-outline', iconActive: 'person' },
+  { name: 'index',   label: 'Home',    icon: 'home',     iconActive: 'home' },
+  { name: 'map',     label: 'Search',  icon: 'search',   iconActive: 'search' },
+  { name: 'add',     label: 'Add',     icon: 'add',      iconActive: 'add' },
+  { name: 'profile', label: 'Profile', icon: 'person',   iconActive: 'person' },
 ] as const;
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function TabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -30,7 +33,6 @@ function TabBar({ state, navigation }: any) {
           const isFocused = state.index === idx;
 
           const handlePress = () => {
-            // "Add" tab opens the full-screen add-place route (no tab bar)
             if (route.name === 'add') {
               router.push('/add-place');
               return;
@@ -39,24 +41,32 @@ function TabBar({ state, navigation }: any) {
           };
 
           return (
-            <TouchableOpacity
+            <AnimatedPressable
               key={route.key}
               onPress={handlePress}
-              activeOpacity={0.8}
+              layout={LinearTransition.springify().damping(14).stiffness(130).mass(0.8)}
               style={[styles.pill, isFocused && styles.pillActive]}
             >
               {isFocused ? (
-                <>
-                  {/* White circle icon container */}
+                <Animated.View 
+                  key="active"
+                  entering={ZoomIn.duration(200)} 
+                  exiting={FadeOut.duration(100)} 
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                >
                   <View style={styles.iconCircle}>
                     <Ionicons name={tab.iconActive as any} size={25} color="#2C2C2C" />
                   </View>
-                  <Text style={styles.label}>{tab.label}</Text>
-                </>
+                  <Animated.Text entering={FadeInRight.delay(50).duration(200)} style={styles.label}>
+                    {tab.label}
+                  </Animated.Text>
+                </Animated.View>
               ) : (
-                <Ionicons name={tab.icon as any} size={20} color="rgba(255,255,255,0.6)" />
+                <Animated.View key="inactive" entering={ZoomIn.duration(200)} exiting={FadeOut.duration(100)}>
+                  <Ionicons name={tab.icon as any} size={28} color="rgba(255,255,255,0.6) fontWeight: 600" />
+                </Animated.View>
               )}
-            </TouchableOpacity>
+            </AnimatedPressable>
           );
         })}
       </View>
@@ -71,7 +81,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <TabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: '#1E1E1E' } }}
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="map" />
@@ -91,8 +101,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 38,
     borderTopRightRadius: 38,
     paddingHorizontal: 10,
-    paddingTop: 10,
-    gap: 15,
+    paddingTop: 15,
+    gap: 25,
   },
   row: {
     flexDirection: 'row',
@@ -134,7 +144,7 @@ const styles = StyleSheet.create({
   // Home indicator: 172×4, rgba(255,255,255,0.3), centered
   indicator: {
     width: 172,
-    height: 4,
+    height: 2,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.3)',
     alignSelf: 'center',

@@ -1,8 +1,8 @@
 export function isPlaceOpen(reportedHours: string | null | undefined): boolean {
   if (!reportedHours) return false;
   
-  // Format is typically "9:00 PM – 4:00 AM" or "9:00 PM - 4:00 AM"
-  const parts = reportedHours.split(/[-–—]/).map(s => s.trim());
+  // Format is typically "9:00 PM – 4:00 AM" or "9:00 PM to 4:00 AM"
+  const parts = reportedHours.split(/\s*[-–—]\s*|\s+to\s+/i).map(s => s.trim());
   if (parts.length !== 2) return false;
 
   const parseTime = (timeStr: string) => {

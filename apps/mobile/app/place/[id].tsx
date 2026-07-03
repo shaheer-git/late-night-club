@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Image, Alert, Linking, TextInput
+  Image, Alert, Linking, TextInput, Dimensions, ActivityIndicator
 } from 'react-native';
+
+const { width: screenWidth } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,6 +20,26 @@ import StatusBadge from '../../src/components/place/StatusBadge';
 import { timeAgo } from '../../src/utils/formatTime';
 import { formatDistance, calculateDistance } from '../../src/utils/formatDistance';
 import { useLocationStore } from '../../src/store/locationStore';
+
+function SkeletonImage({ uri, onPress }: { uri: string, onPress: () => void }) {
+  const [loading, setLoading] = useState(true);
+  return (
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={{ width: screenWidth, height: 220, backgroundColor: '#2C2C2C' }}>
+      <Image 
+        source={{ uri }} 
+        style={{ width: '100%', height: '100%' }} 
+        resizeMode="cover" 
+        onLoadStart={() => setLoading(true)}
+        onLoadEnd={() => setLoading(false)}
+      />
+      {loading && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2C2C2C' }}>
+          <ActivityIndicator color="rgba(255,255,255,0.3)" />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
 
 export default function PlaceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -119,10 +141,15 @@ export default function PlaceDetailScreen() {
   if (loading || !place) {
     return (
       <View className="flex-1 bg-dark items-center justify-center">
-        <Text className="text-white font-medium text-[16px]">Loading...</Text>
+        <ActivityIndicator size="large" color="#C6FF34" />
       </View>
     );
   }
+
+  const allImages = [
+    ...(place.image_urls || []),
+    ...(place.recent_verifications?.filter(v => v.image_url).map(v => v.image_url as string) || [])
+  ];
 
   return (
     <View className="flex-1 bg-dark">
@@ -132,10 +159,10 @@ export default function PlaceDetailScreen() {
         {/* Back header */}
         <View className="flex-row items-center px-4 py-3 gap-3">
           <TouchableOpacity
-            className="w-10 h-10 bg-white/10 rounded-lg items-center justify-center"
+            className="w-10 h-10 bg-[#3A3A3A] rounded-md items-center justify-center"
             onPress={() => router.back()}
           >
-            <Text className="text-white text-lg">←</Text>
+            <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <Text className="font-semibold text-[18px] text-white flex-1" numberOfLines={1}>
             {place.name}
@@ -144,26 +171,27 @@ export default function PlaceDetailScreen() {
         </View>
 
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 140 }}
+          contentContainerStyle={{ paddingBottom: 170 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero image */}
-          <TouchableOpacity 
-            className="w-full h-[220px] bg-[#333]" 
-            activeOpacity={0.9}
-            onPress={() => {
-              if (place.image_urls?.length) {
-                openImageViewer(place.image_urls, 0);
-              }
-            }}
-          >
-            {place.image_urls?.[0]
-              ? <Image source={{ uri: place.image_urls[0] }} className="w-full h-full" resizeMode="cover" />
-              : <View className="flex-1 items-center justify-center">
-                  <Text className="text-[64px]">🏪</Text>
-                </View>
-            }
-          </TouchableOpacity>
+          {/* Hero image slider */}
+          <View className="w-full h-[220px] bg-[#333]">
+            {allImages.length > 0 ? (
+              <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} className="w-full h-full">
+                {allImages.map((img, idx) => (
+                  <SkeletonImage
+                    key={idx}
+                    uri={img}
+                    onPress={() => openImageViewer(allImages, idx)}
+                  />
+                ))}
+              </ScrollView>
+            ) : (
+              <View className="flex-1 items-center justify-center">
+                <Text className="text-[64px]">🏪</Text>
+              </View>
+            )}
+          </View>
 
           <View className="px-6 pt-5 gap-5">
             {/* Name + category */}
@@ -178,25 +206,25 @@ export default function PlaceDetailScreen() {
             <View className="bg-white/10 rounded-xl p-4 gap-3">
               {place.address && (
                 <View className="flex-row gap-3 items-start">
-                  <Text className="text-[16px]">📍</Text>
+                  <Ionicons name="location-outline" size={18} color="rgba(255,255,255,0.7)" />
                   <Text className="font-regular text-[14px] text-white/80 flex-1">{place.address}</Text>
                 </View>
               )}
               {place.phone && (
                 <View className="flex-row gap-3 items-center">
-                  <Text className="text-[16px]">📞</Text>
+                  <Ionicons name="call-outline" size={18} color="rgba(255,255,255,0.7)" />
                   <Text className="font-regular text-[14px] text-white/80">{place.phone}</Text>
                 </View>
               )}
               {place.reported_hours && (
                 <View className="flex-row gap-3 items-center">
-                  <Text className="text-[16px]">🕐</Text>
+                  <Ionicons name="time-outline" size={18} color="rgba(255,255,255,0.7)" />
                   <Text className="font-regular text-[14px] text-white/80">{place.reported_hours}</Text>
                 </View>
               )}
               {(place.distance != null || (userLat && userLng)) && (
                 <View className="flex-row gap-3 items-center">
-                  <Text className="text-[16px]">📏</Text>
+                  <Ionicons name="navigate-outline" size={18} color="rgba(255,255,255,0.7)" />
                   <Text className="font-regular text-[14px] text-white/80">
                     {formatDistance(
                       place.distance != null
@@ -268,7 +296,7 @@ export default function PlaceDetailScreen() {
         </ScrollView>
 
         {/* Action buttons */}
-        <View className="absolute bottom-0 left-0 right-0 bg-dark/95 px-6 pt-4 pb-8 gap-3">
+        <View className="absolute bottom-5 left-0 right-0 bg-dark/95 px-6 pt-4 pb-8 gap-3">
           <View className="flex-row gap-3">
             <TouchableOpacity
               className="flex-1 h-[52px] bg-lime rounded-lg items-center justify-center"
@@ -284,6 +312,13 @@ export default function PlaceDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {verifying && (
+          <View className="absolute inset-0 bg-black/60 items-center justify-center z-50">
+            <ActivityIndicator size="large" color="#C6FF34" />
+            <Text className="text-white font-medium mt-4">Verifying...</Text>
+          </View>
+        )}
       </SafeAreaView>
 
       {/* Verify bottom sheet */}
@@ -340,18 +375,18 @@ export default function PlaceDetailScreen() {
           {/* Submit buttons */}
           <View className="flex-row gap-3 mt-2">
             <TouchableOpacity
-              className={`flex-1 h-[56px] bg-status-open/10 border border-status-open/30 rounded-xl items-center justify-center ${verifying ? 'opacity-50' : ''}`}
+              className={`flex-1 h-[56px] bg-lime rounded-[18px] items-center justify-center ${verifying ? 'opacity-50' : ''}`}
               onPress={() => handleVerify('open')}
               disabled={verifying}
             >
-              <Text className="font-semibold text-[16px] text-status-open">🟢 Yes, Open</Text>
+              <Text className="font-semibold text-[16px] text-dark">Yes, Open</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className={`flex-1 h-[56px] bg-status-closed/10 border border-status-closed/30 rounded-xl items-center justify-center ${verifying ? 'opacity-50' : ''}`}
+              className={`flex-1 h-[56px] bg-white/10 border border-white/20 rounded-[18px] items-center justify-center ${verifying ? 'opacity-50' : ''}`}
               onPress={() => handleVerify('closed')}
               disabled={verifying}
             >
-              <Text className="font-semibold text-[16px] text-status-closed">🔴 No, Closed</Text>
+              <Text className="font-semibold text-[16px] text-white">No, Closed</Text>
             </TouchableOpacity>
           </View>
         </BottomSheetScrollView>

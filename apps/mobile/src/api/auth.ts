@@ -2,7 +2,7 @@ import api from './client';
 import { User } from '../types';
 
 export interface LoginPayload { email: string; password: string; }
-export interface RegisterPayload { name: string; email: string; password: string; }
+export interface RegisterPayload { name: string; email: string; password: string; primary_city?: string | null; }
 export interface AuthTokens { access_token: string; refresh_token: string; }
 
 export const authApi = {

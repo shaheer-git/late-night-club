@@ -11,6 +11,7 @@ class RegisterRequest(BaseModel):
     name: str
     email: str
     password: str
+    primary_city: str | None = None
 
 
 class TokenResponse(BaseModel):

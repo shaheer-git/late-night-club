@@ -46,8 +46,8 @@ export function useAuth() {
     return { isNewUser: data.is_new_user ?? false };
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    const { data } = await authApi.register({ name, email, password });
+  const register = async (name: string, email: string, password: string, primary_city: string | null = null) => {
+    const { data } = await authApi.register({ name, email, password, primary_city });
     await saveToken('access_token', data.access_token);
     await saveToken('refresh_token', data.refresh_token);
     setUser(data.user);

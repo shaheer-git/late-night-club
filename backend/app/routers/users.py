@@ -48,19 +48,25 @@ def my_contributions(
     return places
 
 
-@router.get("/me/verifications")
+@router.get("/me/verifications", response_model=List[PlaceListItem])
 def my_verifications(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    from ..services.place_service import _attach_coords
     from ..models.verification import Verification
-    return (
-        db.query(Verification)
-        .filter(Verification.user_id == user.id)
-        .order_by(Verification.created_at.desc())
-        .limit(50)
+    places = (
+        db.query(Place)
+        .join(Verification, Verification.place_id == Place.id)
+        .filter(Verification.user_id == user.id, Place.is_active == True)
+        .distinct()
+        .order_by(Place.created_at.desc())
         .all()
     )
+    for p in places:
+        _attach_coords(db, p)
+        p.distance = None
+    return places
 
 
 @router.post("/me/avatar")

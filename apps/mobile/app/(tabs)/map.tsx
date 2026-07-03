@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, FlatList, Dimensions, Image,
-  Linking, Platform,
+  Linking, Platform, Keyboard,
 } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -195,7 +195,14 @@ export default function SearchScreen() {
         {/* Drag handle */}
         <TouchableOpacity
           style={styles.handleWrap}
-          onPress={() => setDrawer(d => d === 'collapsed' ? 'expanded' : 'collapsed')}
+          onPress={() => {
+            if (drawer === 'expanded') {
+              setDrawer('collapsed');
+              Keyboard.dismiss();
+            } else {
+              setDrawer('expanded');
+            }
+          }}
         >
           <View style={styles.handle} />
         </TouchableOpacity>
@@ -233,6 +240,7 @@ export default function SearchScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={{ flexGrow: 0, flexShrink: 0 }}
             contentContainerStyle={styles.chipsRow}
           >
             {FILTER_CHIPS.map(chip => {
@@ -294,7 +302,9 @@ function SearchPlaceCard({
   onPress: () => void;
   onDirections: () => void;
 }) {
-  const isOpen = isPlaceOpen(place.reported_hours) || place.status === 'open';
+  const isOpen = place.reported_hours 
+    ? isPlaceOpen(place.reported_hours) 
+    : place.status === 'open';
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.cardImg}>
@@ -372,7 +382,7 @@ const styles = StyleSheet.create({
   // Drawer collapsed: just search + chips
   drawer: {
     position: 'absolute',
-    left: 5, right: 5, bottom: 135,
+    left: 5, right: 5, bottom: 145,
     backgroundColor: '#2C2C2C',
     borderRadius: 38,
     paddingHorizontal: 10,
@@ -382,10 +392,10 @@ const styles = StyleSheet.create({
   },
   // Expanded: grows upward to show list
   drawerExpanded: {
-    maxHeight: height * 0.72,
+    top: 120,
   },
 
-  handleWrap: { alignItems: 'center', paddingVertical: 2 },
+  handleWrap: { alignItems: 'center', paddingVertical: 6 },
   handle: {
     width: 68, height: 4,
     borderRadius: 2,
@@ -433,8 +443,8 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: 'Inter_500Medium', fontSize: 12, color: '#2C2C2C' },
   chipTextActive: { color: '#2C2C2C' },
 
-  list: { flexGrow: 0 },
-  listContent: { paddingBottom: 4 },
+  list: { flex: 1 },
+  listContent: { paddingBottom: 4, flexGrow: 1 },
 
   emptyWrap: { paddingVertical: 20, alignItems: 'center' },
   emptyText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: 'rgba(255,255,255,0.4)' },

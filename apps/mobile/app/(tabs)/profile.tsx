@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 140,
+    paddingBottom: 170,
     gap: 16,
   },
 
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   },
   banner: {
     width: '100%',
-    height: 180,
+    height: 160,
   },
   avatarContainer: {
     alignSelf: 'flex-start',

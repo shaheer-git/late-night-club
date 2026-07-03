@@ -16,7 +16,7 @@ interface PlacesStore {
 export const usePlacesStore = create<PlacesStore>((set) => ({
   places: [],
   selectedPlace: null,
-  filters: { radius: 10000 },
+  filters: { radius: 300000 },
   loading: false,
   setPlaces: (places) => {
     const unique = places.filter((p, i, self) => self.findIndex(x => x.id === p.id) === i);
@@ -25,6 +25,6 @@ export const usePlacesStore = create<PlacesStore>((set) => ({
   setSelectedPlace: (selectedPlace) => set({ selectedPlace }),
   setFilter: (key, value) =>
     set((s) => ({ filters: { ...s.filters, [key]: value } })),
-  clearFilters: () => set({ filters: { radius: 10000 } }),
+  clearFilters: () => set({ filters: { radius: 300000 } }),
   setLoading: (loading) => set({ loading }),
 }));
