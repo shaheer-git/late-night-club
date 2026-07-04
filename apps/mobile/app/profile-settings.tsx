@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { TextInput, Alert } from 'react-native';
 import { usersApi } from '../src/api/users';
 import { useAuthStore } from '../src/store/authStore';
+import CustomDialog from '../src/components/common/CustomDialog';
 
 export default function ProfileSettingsScreen() {
   const router = useRouter();
@@ -30,26 +31,37 @@ export default function ProfileSettingsScreen() {
     return parts.slice(1).join(' ') || '';
   });
   const [saving, setSaving] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    isError?: boolean;
+  } | null>(null);
 
   const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
   const hasChanges = fullName !== user?.name;
 
   const handleSignOut = async () => {
+    setShowLogoutDialog(false);
     await logout();
     router.replace('/(auth)/login');
   };
 
   const handleSave = async () => {
-    if (!firstName.trim()) return Alert.alert('Error', 'First Name cannot be empty');
+    if (!firstName.trim()) {
+      setAlertConfig({ visible: true, title: 'Error', message: 'First Name cannot be empty', isError: true });
+      return;
+    }
     setSaving(true);
     try {
       const { data } = await usersApi.updateMe({ name: fullName });
       if (user) {
         setUser({ ...user, name: data.name });
       }
-      Alert.alert('Success', 'Profile updated successfully');
+      setAlertConfig({ visible: true, title: 'Success', message: 'Profile updated successfully' });
     } catch (e) {
-      Alert.alert('Error', 'Failed to update profile');
+      setAlertConfig({ visible: true, title: 'Error', message: 'Failed to update profile', isError: true });
     } finally {
       setSaving(false);
     }
@@ -136,13 +148,35 @@ export default function ProfileSettingsScreen() {
           {/* Sign Out */}
           <TouchableOpacity
             style={styles.btnOutline}
-            onPress={handleSignOut}
+            onPress={() => setShowLogoutDialog(true)}
             activeOpacity={0.85}
           >
             <Text style={styles.btnOutlineText}>Sign Out</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
+
+      <CustomDialog
+        visible={showLogoutDialog}
+        title="Sign Out"
+        message="Are you sure you want to sign out of your account?"
+        confirmText="Log Out"
+        cancelText="Cancel"
+        isDanger={true}
+        onConfirm={handleSignOut}
+        onCancel={() => setShowLogoutDialog(false)}
+      />
+
+      <CustomDialog
+        visible={alertConfig?.visible ?? false}
+        title={alertConfig?.title ?? ''}
+        message={alertConfig?.message ?? ''}
+        confirmText="Got it"
+        hideCancel={true}
+        isDanger={alertConfig?.isError}
+        onConfirm={() => setAlertConfig(null)}
+        onCancel={() => setAlertConfig(null)}
+      />
     </View>
   );
 }

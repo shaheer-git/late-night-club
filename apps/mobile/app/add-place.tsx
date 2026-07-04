@@ -88,27 +88,21 @@ export default function AddPlaceScreen() {
 
   // ── Add Place form ────────────────────────────────────────────────────────────
 
-  const pickImage = () => {
+  const handleUploadPhoto = () => {
     Alert.alert('Upload Photo', 'Choose an option', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Take Photo', onPress: async () => {
+      { text: 'Camera', onPress: async () => {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') return Alert.alert('Permission needed', 'Camera permission is required');
-          const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ['images'],
-            quality: 0.8,
-          });
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5 });
           if (!result.canceled) setImageUri(result.assets[0].uri);
       }},
-      { text: 'Choose from Library', onPress: async () => {
+      { text: 'Gallery', onPress: async () => {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') return Alert.alert('Permission needed', 'Media permission is required');
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            quality: 0.8,
-          });
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5 });
           if (!result.canceled) setImageUri(result.assets[0].uri);
-      }}
+      }},
+      { text: 'Cancel', style: 'cancel' }
     ]);
   };
 
@@ -119,9 +113,7 @@ export default function AddPlaceScreen() {
       let imageUrls: string[] = [];
       const uploadPromise = async () => {
         if (!imageUri) return;
-        const form = new FormData();
-        form.append('file', { uri: imageUri, name: 'photo.jpg', type: 'image/jpeg' } as any);
-        const { data } = await mediaApi.upload(form);
+        const { data } = await mediaApi.upload(imageUri);
         imageUrls = [data.url];
       };
 
@@ -133,7 +125,7 @@ export default function AddPlaceScreen() {
       const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const payload = {
         name,
-        category,
+        category: category as any,
         lat: pinLat,
         lng: pinLng,
         address: addr,
@@ -149,8 +141,9 @@ export default function AddPlaceScreen() {
       await restoreSession();
       usePlacesStore.getState().setSelectedPlace(data as any);
       setDone(true);
-    } catch (e: any) {
-      const msg = e?.response?.data?.detail ?? e.message ?? 'Something went wrong';
+    } catch (error: any) {
+      console.log('Error adding place:', error);
+      const msg = error?.response?.data?.detail || error.message || 'Failed to add place';
       Alert.alert('Error', msg);
     } finally {
       setLoading(false);
@@ -164,7 +157,23 @@ export default function AddPlaceScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => {
+              if (name.trim() || imageUri) {
+                Alert.alert(
+                  'Discard changes?',
+                  'You have unsaved changes. Are you sure you want to go back and discard them?',
+                  [
+                    { text: 'Keep Editing', style: 'cancel' },
+                    { text: 'Discard', style: 'destructive', onPress: () => router.back() }
+                  ]
+                );
+              } else {
+                router.back();
+              }
+            }}
+          >
             <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Add Place</Text>
@@ -180,7 +189,7 @@ export default function AddPlaceScreen() {
           {/* ── Store Image ── */}
           <View style={styles.section}>
             <Text style={styles.label}>Store Image</Text>
-            <TouchableOpacity style={styles.imageUpload} onPress={pickImage}>
+            <TouchableOpacity style={styles.imageUpload} onPress={handleUploadPhoto}>
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
               ) : (

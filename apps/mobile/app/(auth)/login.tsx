@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator,
+  StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/hooks/useAuth';
-import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
+import CustomDialog from '../../src/components/common/CustomDialog';
+import { useAuthStore } from '../../src/store/authStore';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -23,14 +24,18 @@ WebBrowser.maybeCompleteAuthSession();
 export default function LoginScreen() {
   const router = useRouter();
   const { sendOtp, loginGoogle } = useAuth();
+  const { setUser } = useAuthStore();
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+  } | null>(null);
 
   const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'dummy_id_waiting_for_user';
   
-  // Explicitly set the redirect URI so Google accepts it.
-  // On web (browser testing) → http://localhost:8081 (must match Google Console exactly)
-  // On native → uses the app scheme lnc://
   const redirectUri = Platform.OS === 'web'
     ? 'http://localhost:8081'
     : makeRedirectUri({ scheme: 'lnc', path: 'google-auth' });
@@ -46,27 +51,28 @@ export default function LoginScreen() {
   useEffect(() => {
     if (response?.type === 'success') {
       const { authentication } = response;
-      // Web flow gives access_token; native flow gives idToken
       const idToken = authentication?.idToken ?? '';
       const accessToken = authentication?.accessToken ?? '';
 
-      if (!idToken && !accessToken) {
-        Alert.alert('Google Auth Error', 'No token received from Google.');
+      if (!idToken) {
+        setLoadingGoogle(false);
+        setAlertConfig({ visible: true, title: 'Google Auth Error', message: 'No token received from Google.' });
         return;
       }
 
       setLoading(true);
       loginGoogle(idToken, accessToken)
         .then(({ isNewUser }) => {
-          // New users see welcome screen; returning users go straight to home
           router.replace(isNewUser ? '/(auth)/welcome' : '/(tabs)');
         })
         .catch((e: any) => {
-          Alert.alert('Google Auth Error', e?.response?.data?.detail ?? e.message);
+          console.log('Google backend verify error:', e?.response?.data || e.message);
+          setAlertConfig({ visible: true, title: 'Google Auth Error', message: e?.response?.data?.detail ?? e.message });
           setLoading(false);
         });
     } else if (response?.type === 'error') {
-      Alert.alert('Google Auth Error', response.error?.message ?? 'Login failed');
+      setLoadingGoogle(false);
+      setAlertConfig({ visible: true, title: 'Google Auth Error', message: response.error?.message ?? 'Login failed' });
     }
   }, [response]);
 
@@ -79,11 +85,10 @@ export default function LoginScreen() {
     try {
       await sendOtp(fullPhone);
       router.push({ pathname: '/(auth)/otp', params: { phone: fullPhone } });
-    } catch (e: any) {
-      const msg = e?.response?.data?.detail ?? e?.message ?? 'Failed to send OTP. Please check your connection.';
-      Alert.alert('OTP Failed', msg);
-      // For developer testing fallback, let them proceed anyway
-      router.push({ pathname: '/(auth)/otp', params: { phone: fullPhone } });
+    } catch (error: any) {
+      console.log('Login error:', error?.response?.data || error.message);
+      const msg = error?.response?.data?.detail ?? error.message ?? 'An error occurred';
+      setAlertConfig({ visible: true, title: 'OTP Failed', message: msg });
     } finally {
       setLoading(false);
     }
@@ -91,9 +96,10 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = async () => {
     if (!request) {
-      Alert.alert('Error', 'Google Login is not fully initialized yet.');
+      setAlertConfig({ visible: true, title: 'Error', message: 'Google Login is not fully initialized yet.' });
       return;
     }
+    setLoadingGoogle(true);
     promptAsync();
   };
 

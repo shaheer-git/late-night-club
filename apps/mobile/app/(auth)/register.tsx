@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, Alert,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useLocationStore } from '../../src/store/locationStore';
 import { RegisterIcon } from '../../src/components/icons/AuthIcons';
+import CustomDialog from '../../src/components/common/CustomDialog';
 
 // Screen 4 — Name collection (new users only)
 // Stacked bowls icon, Name + Last Name inputs, Terms checkbox
@@ -26,6 +27,11 @@ export default function RegisterScreen() {
   const [lastName, setLastName] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+  } | null>(null);
 
   const canContinue = firstName.trim().length > 0 && lastName.trim().length > 0 && agreed;
 
@@ -41,8 +47,7 @@ export default function RegisterScreen() {
       router.replace('/(auth)/welcome');
     } catch (e: any) {
       const msg = e?.response?.data?.detail ?? 'Registration failed. Please try again.';
-      Alert.alert('Sign Up Failed', msg);
-      router.replace('/(auth)/welcome');
+      setAlertConfig({ visible: true, title: 'Sign Up Failed', message: msg });
     } finally {
       setLoading(false);
     }
@@ -145,6 +150,16 @@ export default function RegisterScreen() {
           <View style={[styles.dot, styles.dotActive]} />
         </View>
       </SafeAreaView>
+
+      <CustomDialog
+        visible={alertConfig?.visible ?? false}
+        title={alertConfig?.title ?? ''}
+        message={alertConfig?.message ?? ''}
+        confirmText="Got it"
+        hideCancel={true}
+        onConfirm={() => setAlertConfig(null)}
+        onCancel={() => setAlertConfig(null)}
+      />
     </View>
   );
 }

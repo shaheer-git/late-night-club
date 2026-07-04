@@ -3,8 +3,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from 'react-native';
+import { useState } from 'react';
+import CustomDialog from '../src/components/common/CustomDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -24,6 +25,7 @@ const ROWS: HelpRow[] = [
 
 export default function HelpSupportScreen() {
   const router = useRouter();
+  const [showComingSoon, setShowComingSoon] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -44,7 +46,7 @@ export default function HelpSupportScreen() {
             <View key={item.label}>
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => Alert.alert('Coming soon')}
+                onPress={() => setShowComingSoon(true)}
                 activeOpacity={0.7}
               >
                 <View style={styles.rowLeft}>
@@ -60,6 +62,15 @@ export default function HelpSupportScreen() {
           ))}
         </View>
       </SafeAreaView>
+
+      <CustomDialog
+        visible={showComingSoon}
+        title="Coming Soon"
+        message="This feature is not available yet. We are working hard to bring it to you soon!"
+        confirmText="Got it"
+        onConfirm={() => setShowComingSoon(false)}
+        onCancel={() => setShowComingSoon(false)}
+      />
     </View>
   );
 }

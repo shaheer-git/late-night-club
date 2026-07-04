@@ -1,13 +1,15 @@
 import { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Image, KeyboardAvoidingView, Platform, Alert,
+  StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/hooks/useAuth';
+import CustomDialog from '../../src/components/common/CustomDialog';
+import { useEffect } from 'react';
 
 // Screen 3 — OTP verification
 // Hash/grid icon, "We've sent a 4 digit code to your number"
@@ -16,10 +18,16 @@ import { useAuth } from '../../src/hooks/useAuth';
 export default function OTPScreen() {
   const router = useRouter();
   const { phone } = useLocalSearchParams<{ phone: string }>();
-  const { verifyOtp } = useAuth();
+  const { verifyOtp, sendOtp } = useAuth();
 
   const [otp, setOtp] = useState(['', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+  } | null>(null);
 
   const refs = [
     useRef<TextInput>(null),
@@ -28,10 +36,35 @@ export default function OTPScreen() {
     useRef<TextInput>(null),
   ];
 
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setInterval(() => setCountdown(c => c - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown]);
+
   const handleChange = (val: string, idx: number) => {
-    const next = [...otp];
-    next[idx] = val.slice(-1);
-    setOtp(next);
+    // Handle pasting/autofill of the whole code
+    if (val.length > 1) {
+      const chars = val.replace(/\D/g, '').split('').slice(0, 4);
+      setOtp(prev => {
+        const next = [...prev];
+        chars.forEach((char, i) => {
+          if (i < 4) next[i] = char;
+        });
+        return next;
+      });
+      const lastFilledIndex = Math.min(chars.length - 1, 3);
+      if (lastFilledIndex < 3) refs[lastFilledIndex + 1].current?.focus();
+      else refs[3].current?.blur();
+      return;
+    }
+
+    setOtp(prev => {
+      const next = [...prev];
+      next[idx] = val.slice(-1);
+      return next;
+    });
     if (val && idx < 3) refs[idx + 1].current?.focus();
   };
 
@@ -56,8 +89,23 @@ export default function OTPScreen() {
         router.push({ pathname: '/(auth)/register', params: { phone, otp: otp.join('') } });
       }
     } catch (e: any) {
-      const msg = e?.response?.data?.detail ?? e.message ?? 'Invalid or expired OTP. Please try again.';
-      Alert.alert('Verification Failed', msg);
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'Invalid OTP code.';
+      setAlertConfig({ visible: true, title: 'Verification Failed', message: msg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const handleResend = async () => {
+    if (countdown > 0) return;
+    setLoading(true);
+    try {
+      await sendOtp(phone);
+      setCountdown(30);
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? e?.message ?? 'Failed to resend OTP.';
+      setAlertConfig({ visible: true, title: 'Error', message: msg });
     } finally {
       setLoading(false);
     }
@@ -72,10 +120,15 @@ export default function OTPScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
-          {/* Back */}
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <ScrollView 
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Back */}
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
 
           {/* Icon */}
           <View style={styles.iconWrap}>
@@ -102,7 +155,8 @@ export default function OTPScreen() {
                 onChangeText={v => handleChange(v, idx)}
                 onKeyPress={e => handleKey(e, idx)}
                 keyboardType="number-pad"
-                maxLength={1}
+                textContentType="oneTimeCode"
+                maxLength={4} // Allow longer paste string to be caught
                 textAlign="center"
                 selectionColor="#C6FF34"
               />
@@ -110,12 +164,20 @@ export default function OTPScreen() {
           </View>
 
           {/* Resend */}
-          <Text style={styles.resend}>
-            Didn't get OTP?{' '}
-            <Text style={styles.resendLink}>Resend OTP</Text>
-          </Text>
+          <TouchableOpacity 
+            style={styles.resendWrap} 
+            onPress={handleResend}
+            disabled={countdown > 0 || loading}
+          >
+            <Text style={styles.resend}>
+              Didn't get OTP?{' '}
+              <Text style={[styles.resendLink, countdown > 0 && { color: 'rgba(255,255,255,0.4)' }]}>
+                {countdown > 0 ? `Resend OTP in ${countdown}s` : 'Resend OTP'}
+              </Text>
+            </Text>
+          </TouchableOpacity>
 
-          <View style={{ flex: 1 }} />
+          <View style={{ flex: 1, minHeight: 24 }} />
 
           {/* Continue */}
           <View style={styles.btnWrap}>
@@ -131,15 +193,25 @@ export default function OTPScreen() {
             </TouchableOpacity>
           </View>
 
-        </KeyboardAvoidingView>
-
         {/* Step dots — dot 2 active (OTP step) */}
         <View style={styles.dots}>
           <View style={styles.dot} />
           <View style={[styles.dot, styles.dotActive]} />
           <View style={styles.dot} />
         </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
+
+      <CustomDialog
+        visible={alertConfig?.visible ?? false}
+        title={alertConfig?.title ?? ''}
+        message={alertConfig?.message ?? ''}
+        confirmText="Got it"
+        hideCancel={true}
+        onConfirm={() => setAlertConfig(null)}
+        onCancel={() => setAlertConfig(null)}
+      />
     </View>
   );
 }
@@ -197,12 +269,15 @@ const styles = StyleSheet.create({
     color: '#2C2C2C',
   },
 
+  resendWrap: {
+    paddingHorizontal: 24,
+    marginTop: 16,
+    alignItems: 'flex-start',
+  },
   resend: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
     color: 'rgba(255,255,255,0.5)',
-    paddingHorizontal: 24,
-    marginTop: 16,
   },
   resendLink: {
     fontFamily: 'Inter_600SemiBold',

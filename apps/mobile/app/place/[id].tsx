@@ -20,6 +20,7 @@ import StatusBadge from '../../src/components/place/StatusBadge';
 import { timeAgo } from '../../src/utils/formatTime';
 import { formatDistance, calculateDistance } from '../../src/utils/formatDistance';
 import { useLocationStore } from '../../src/store/locationStore';
+import CustomDialog from '../../src/components/common/CustomDialog';
 
 function SkeletonImage({ uri, onPress }: { uri: string, onPress: () => void }) {
   const [loading, setLoading] = useState(true);
@@ -54,6 +55,7 @@ export default function PlaceDetailScreen() {
   const [viewerImages, setViewerImages] = useState<{uri: string}[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerVisible, setViewerVisible] = useState(false);
+  const [showDirectionsDialog, setShowDirectionsDialog] = useState(false);
   const sheetRef = useRef<BottomSheet>(null);
 
   const openImageViewer = (urls: string[], index = 0) => {
@@ -131,11 +133,7 @@ export default function PlaceDetailScreen() {
 
   const openDirections = () => {
     if (!place) return;
-    Alert.alert('Get Directions', 'Choose navigation app', [
-      { text: 'Google Maps', onPress: () => Linking.openURL(`https://maps.google.com/?q=${place.lat},${place.lng}`) },
-      { text: 'Apple Maps', onPress: () => Linking.openURL(`maps://maps.apple.com/?q=${place.lat},${place.lng}`) },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    setShowDirectionsDialog(true);
   };
 
   if (loading || !place) {
@@ -296,7 +294,7 @@ export default function PlaceDetailScreen() {
         </ScrollView>
 
         {/* Action buttons */}
-        <View className="absolute bottom-5 left-0 right-0 bg-dark/95 px-6 pt-4 pb-8 gap-3">
+        <View className="absolute bottom-0 left-0 right-0 bg-dark/95 px-6 pt-4 pb-8 gap-3">
           <View className="flex-row gap-3">
             <TouchableOpacity
               className="flex-1 h-[52px] bg-lime rounded-lg items-center justify-center"
@@ -397,6 +395,33 @@ export default function PlaceDetailScreen() {
         imageIndex={viewerIndex}
         visible={viewerVisible}
         onRequestClose={() => setViewerVisible(false)}
+      />
+      <CustomDialog
+        visible={showDirectionsDialog}
+        title="Get Directions"
+        message="Choose navigation app"
+        options={[
+          {
+            text: 'Google Maps',
+            onPress: () => {
+              setShowDirectionsDialog(false);
+              Linking.openURL(`https://maps.google.com/?q=${place?.lat},${place?.lng}`);
+            },
+          },
+          {
+            text: 'Apple Maps',
+            onPress: () => {
+              setShowDirectionsDialog(false);
+              Linking.openURL(`maps://maps.apple.com/?q=${place?.lat},${place?.lng}`);
+            },
+          },
+          {
+            text: 'Cancel',
+            onPress: () => setShowDirectionsDialog(false),
+            isCancel: true,
+          },
+        ]}
+        onCancel={() => setShowDirectionsDialog(false)}
       />
     </View>
   );

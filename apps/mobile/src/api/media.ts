@@ -1,31 +1,35 @@
 import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import { API_URL } from '../constants/config';
-
-const getToken = async (key: string) => {
-  if (Platform.OS === 'web') return localStorage.getItem(key);
-  return SecureStore.getItemAsync(key);
-};
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../constants/config';
 
 export const mediaApi = {
-  upload: async (form: FormData) => {
-    const token = await getToken('access_token');
-    const response = await fetch(`${API_URL}/api/media/upload`, {
+  upload: async (imageUri: string) => {
+    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+      throw new Error('Cloudinary configuration is missing. Please check your .env file.');
+    }
+
+    const form = new FormData();
+    const cleanUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
+    form.append('file', { uri: cleanUri, name: 'photo.jpg', type: 'image/jpeg' } as any);
+    form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
       method: 'POST',
       body: form,
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'Content-Type': 'multipart/form-data',
       },
     });
+
     if (!response.ok) {
       let msg = response.statusText;
       try {
         const errData = await response.json();
-        msg = errData.detail || msg;
+        msg = errData.error?.message || msg;
       } catch (e) {}
       throw new Error(`Upload failed: ${msg}`);
     }
+
     const data = await response.json();
-    return { data };
+    return { data: { url: data.secure_url } };
   },
 };

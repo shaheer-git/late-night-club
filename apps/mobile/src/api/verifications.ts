@@ -3,6 +3,7 @@ import { Verification } from '../types';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../constants/config';
+import { mediaApi } from './media';
 
 export interface VerificationPayload {
   place_id: string;
@@ -18,13 +19,20 @@ const getToken = async (key: string) => {
 
 export const verificationsApi = {
   submit: async (data: VerificationPayload) => {
+    let imageUrl: string | undefined;
+
+    if (data.imageUri) {
+      // Direct Cloudinary upload
+      const uploadRes = await mediaApi.upload(data.imageUri);
+      imageUrl = uploadRes.data.url;
+    }
+
     const form = new FormData();
     form.append('place_id', data.place_id);
     form.append('status', data.status);
     if (data.note) form.append('note', data.note);
-    if (data.imageUri) {
-      const cleanUri = Platform.OS === 'ios' ? data.imageUri.replace('file://', '') : data.imageUri;
-      form.append('image', { uri: cleanUri, name: 'proof.jpg', type: 'image/jpeg' } as any);
+    if (imageUrl) {
+      form.append('image_url', imageUrl);
     }
 
     const token = await getToken('access_token');

@@ -17,14 +17,15 @@ async def verify(
     status: str = Form(...),
     note: str = Form(None),
     image: UploadFile = File(None),
+    image_url: str = Form(None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    image_url = None
+    final_image_url = image_url
     if image:
-        image_url = await upload_file(image)
+        final_image_url = await upload_file(image)
         
-    return submit_verification(db, place_id, user, status, note, image_url)
+    return submit_verification(db, place_id, user, status, note, final_image_url)
 
 
 @router.get("/place/{place_id}", response_model=List[VerificationResponse])

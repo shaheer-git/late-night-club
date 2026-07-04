@@ -3,7 +3,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Linking,
   ScrollView,
 } from 'react-native';
@@ -11,12 +10,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import CustomDialog from '../src/components/common/CustomDialog';
 import { useLocationStore } from '../src/store/locationStore';
 import { useLocation } from '../src/hooks/useLocation';
 
 export default function GeneralSettingsScreen() {
   const router = useRouter();
   const locationStore = useLocationStore();
+  const [showClearCache, setShowClearCache] = useState(false);
+  
   // Trigger location permission request and get current coords
   useLocation();
 
@@ -105,7 +108,7 @@ export default function GeneralSettingsScreen() {
             {/* Clear cache */}
             <TouchableOpacity
               style={styles.row}
-              onPress={() => Alert.alert('Cache cleared')}
+              onPress={() => setShowClearCache(true)}
               activeOpacity={0.7}
             >
               <View style={styles.rowLeft}>
@@ -153,6 +156,16 @@ export default function GeneralSettingsScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <CustomDialog
+        visible={showClearCache}
+        title="Cache Cleared"
+        message="Your local cache has been cleared successfully."
+        confirmText="Got it"
+        hideCancel={true}
+        onConfirm={() => setShowClearCache(false)}
+        onCancel={() => setShowClearCache(false)}
+      />
     </View>
   );
 }

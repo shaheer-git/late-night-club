@@ -11,10 +11,13 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/hooks/useAuth';
+import CustomDialog from '../../src/components/common/CustomDialog';
+import { useState } from 'react';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user: realUser, isAuthenticated: realAuth, logout } = useAuth();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // ── DEV MOCK — remove when backend auth is working ────────────────────────
   const DEV_MOCK = false; // set to false to use real auth
@@ -155,13 +158,27 @@ export default function ProfileScreen() {
           {/* Log Out */}
           <TouchableOpacity
             style={styles.btnLime}
-            onPress={logout}
+            onPress={() => setShowLogoutDialog(true)}
             activeOpacity={0.85}
           >
-            <Text style={styles.btnLimeText}>Log Out</Text>
+            <Text style={styles.btnLimeText}>Sign Out</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
+
+      <CustomDialog
+        visible={showLogoutDialog}
+        title="Sign Out"
+        message="Are you sure you want to sign out of your account?"
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        isDanger={true}
+        onConfirm={async () => {
+          setShowLogoutDialog(false);
+          await logout();
+        }}
+        onCancel={() => setShowLogoutDialog(false)}
+      />
     </View>
   );
 }
