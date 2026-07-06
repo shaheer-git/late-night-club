@@ -2,6 +2,7 @@ FROM ghcr.io/puppeteer/puppeteer:latest
 
 USER root
 WORKDIR /app
+RUN chown -R pptruser:pptruser /app
 
 COPY --chown=pptruser:pptruser package*.json ./
 RUN npm ci
