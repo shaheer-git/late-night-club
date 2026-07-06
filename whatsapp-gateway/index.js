@@ -86,6 +86,10 @@ async function usePostgresAuthState(pool, tableName = 'baileys_auth') {
         },
         saveCreds: () => {
             return writeData(creds, 'creds');
+        },
+        clearAuth: async () => {
+            console.log('Clearing invalid auth state from database...');
+            await pool.query(`DELETE FROM ${tableName}`);
         }
     };
 }
@@ -95,19 +99,22 @@ const qrcode = require('qrcode-terminal');
 let sock;
 
 async function startSock() {
-    const { state, saveCreds } = await usePostgresAuthState(pool);
-    console.log(`Using default stable Baileys version`);
+    const { state, saveCreds, clearAuth } = await usePostgresAuthState(pool);
+    const { fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+    const { version, isLatest } = await fetchLatestBaileysVersion();
+    console.log(`Using WhatsApp v${version.join('.')}, isLatest: ${isLatest}`);
     
     sock = makeWASocket({
+        version,
         auth: state,
         logger: pino({ level: 'silent' }), // Hide internal logs now that we know the issue
         printQRInTerminal: false, 
-        browser: ['Ubuntu', 'Chrome', '20.0.04']
+        browser: ['Ubuntu', 'Chrome', '113.0.5672.126']
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
@@ -118,13 +125,16 @@ async function startSock() {
         }
 
         if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            const isLoggedOut = lastDisconnect.error?.output?.statusCode === DisconnectReason.loggedOut;
             console.error('Connection closed due to error:', lastDisconnect.error);
-            console.log('Reconnecting:', shouldReconnect);
-            if (shouldReconnect) {
+            
+            if (isLoggedOut) {
+                console.log('Session is invalid or logged out! Clearing database and generating a new QR code...');
+                await clearAuth();
                 startSock();
             } else {
-                console.log('Logged out. Please restart the app and scan a new QR code.');
+                console.log('Reconnecting automatically...');
+                startSock();
             }
         } else if (connection === 'open') {
             console.log('✅ WhatsApp Gateway is READY and connected!');
