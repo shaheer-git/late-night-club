@@ -1,15 +1,22 @@
-FROM ghcr.io/puppeteer/puppeteer:latest
+FROM node:18-slim
 
-USER root
+# Install chromium and its dependencies so Puppeteer can run headlessly
+RUN apt-get update && apt-get install -y \
+    chromium \
+    fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
-RUN chown -R pptruser:pptruser /app
 
-COPY --chown=pptruser:pptruser package*.json ./
+COPY package*.json ./
 RUN npm ci
 
-COPY --chown=pptruser:pptruser . .
+COPY . .
 
-USER pptruser
+# Tell Puppeteer to use the installed Chromium instead of downloading its own
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 EXPOSE 3001
 
