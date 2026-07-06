@@ -35,7 +35,25 @@ async function startGateway() {
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
-                '--disable-software-rasterizer'
+                '--disable-software-rasterizer',
+                '--disable-extensions',
+                '--disable-background-networking',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-breakpad',
+                '--disable-client-side-phishing-detection',
+                '--disable-default-apps',
+                '--disable-features=Translate',
+                '--disable-hang-monitor',
+                '--disable-ipc-flooding-protection',
+                '--disable-prompt-on-repost',
+                '--disable-sync',
+                '--metrics-recording-only',
+                '--no-first-run',
+                '--password-store=basic',
+                '--use-mock-keychain',
+                '--mute-audio',
+                '--hide-scrollbars'
             ]
         }
     });
