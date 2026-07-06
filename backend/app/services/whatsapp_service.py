@@ -48,12 +48,12 @@ async def send_whatsapp_otp(phone: str, code: str) -> bool:
         # Standard format for self-hosted node/python whatsapp gateways
         async with httpx.AsyncClient() as client:
             payload = {
-                "phone": phone.replace("+", ""), # standard format for whatsapp
+                "number": phone.replace("+", ""), # standard format for whatsapp
                 "message": message
             }
             # Post to send message endpoint of the gateway
             response = await client.post(
-                f"{settings.WHATSAPP_GATEWAY_URL}/send-message",
+                f"{settings.WHATSAPP_GATEWAY_URL}/send",
                 json=payload,
                 timeout=10.0
             )
