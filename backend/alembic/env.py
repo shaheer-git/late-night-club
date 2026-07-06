@@ -11,7 +11,8 @@ from app.models.verification import Verification
 from app.config import settings
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+alembic_url = settings.DATABASE_URL.replace("%", "%%") if settings.DATABASE_URL else ""
+config.set_main_option("sqlalchemy.url", alembic_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
