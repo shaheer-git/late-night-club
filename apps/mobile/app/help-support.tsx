@@ -3,6 +3,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import { useState } from 'react';
 import CustomDialog from '../src/components/common/CustomDialog';
@@ -14,13 +15,19 @@ import { Ionicons } from '@expo/vector-icons';
 type HelpRow = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
+  route?: any; // expo-router route
+  action?: () => void;
 };
 
 const ROWS: HelpRow[] = [
-  { icon: 'flag-outline',         label: 'Report an issue' },
-  { icon: 'people-outline',       label: 'Community guidelines' },
-  { icon: 'help-circle-outline',  label: 'FAQ' },
-  { icon: 'mail-outline',         label: 'Contact support' },
+  { 
+    icon: 'flag-outline',         
+    label: 'Report an issue', 
+    action: () => Linking.openURL('mailto:developer.fyrehub@gmail.com?subject=Reporting Issue - LNC') 
+  },
+  { icon: 'people-outline',       label: 'Community guidelines', route: '/help/community-guidelines' },
+  { icon: 'help-circle-outline',  label: 'FAQ', route: '/help/faq' },
+  { icon: 'mail-outline',         label: 'Contact support', route: '/help/contact-support' },
 ];
 
 export default function HelpSupportScreen() {
@@ -46,7 +53,13 @@ export default function HelpSupportScreen() {
             <View key={item.label}>
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => setShowComingSoon(true)}
+                onPress={() => {
+                  if (item.action) {
+                    item.action();
+                  } else if (item.route) {
+                    router.push(item.route);
+                  }
+                }}
                 activeOpacity={0.7}
               >
                 <View style={styles.rowLeft}>

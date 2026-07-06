@@ -75,6 +75,7 @@ export default function RootLayout() {
               <Stack.Screen name="my-contributions" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="general-settings" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="help-support" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="help" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </AuthRestorer>
         </ThemeProvider>

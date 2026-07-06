@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 import httpx
 import logging
@@ -13,6 +13,7 @@ from ..schemas.user import UserResponse
 from ..services.auth_service import register_user, login_user, make_tokens
 from ..services.whatsapp_service import generate_otp, save_otp, verify_otp, send_whatsapp_otp
 from ..utils.security import decode_token, hash_password
+from ..utils.limiter import limiter
 from ..models.user import User
 from ..config import settings
 
@@ -27,13 +28,15 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
     user = login_user(db, req.email, req.password)
     return make_tokens(user)
 
 
 @router.post("/otp/send")
-async def send_otp(req: OtpSendRequest):
+@limiter.limit("5/minute")
+async def send_otp(request: Request, req: OtpSendRequest):
     phone = req.phone.strip()
     if not phone:
         raise HTTPException(status_code=400, detail="Phone number is required")
@@ -92,6 +95,9 @@ async def google_login(req: GoogleAuthRequest, db: Session = Depends(get_db)):
                 if response.status_code != 200:
                     raise HTTPException(status_code=401, detail="Invalid Google ID token")
                 payload = response.json()
+                aud = payload.get("aud")
+                if settings.GOOGLE_CLIENT_ID and aud != settings.GOOGLE_CLIENT_ID:
+                    raise HTTPException(status_code=401, detail="Invalid token audience")
                 email = payload.get("email")
                 name = payload.get("name", "Google User")
                 avatar_url = payload.get("picture")

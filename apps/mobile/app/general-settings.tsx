@@ -125,7 +125,7 @@ export default function GeneralSettingsScreen() {
             {/* Privacy policy */}
             <TouchableOpacity
               style={styles.row}
-              onPress={() => Linking.openURL('https://latenightclub.app/privacy')}
+              onPress={() => Linking.openURL('https://legal-privacy.fyrehub.in/')}
               activeOpacity={0.7}
             >
               <View style={styles.rowLeft}>
@@ -142,7 +142,7 @@ export default function GeneralSettingsScreen() {
             {/* Terms of use */}
             <TouchableOpacity
               style={styles.row}
-              onPress={() => Linking.openURL('https://latenightclub.app/terms')}
+              onPress={() => Linking.openURL('https://legal-terms.fyrehub.in/')}
               activeOpacity={0.7}
             >
               <View style={styles.rowLeft}>

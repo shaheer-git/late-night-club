@@ -40,7 +40,11 @@ def get_nearby_places(
 ) -> dict:
     user_point = _user_point(lng, lat)
 
-    query = db.query(Place).filter(
+    query = db.query(
+        Place,
+        ST_Distance(func.cast(Place.location, Geography), user_point).label("distance"),
+        func.ST_AsText(Place.location).label("wkt_location")
+    ).filter(
         Place.is_active == True,
         ST_DWithin(func.cast(Place.location, Geography), user_point, radius_meters),
     )
@@ -53,12 +57,19 @@ def get_nearby_places(
     query = query.order_by(ST_Distance(func.cast(Place.location, Geography), user_point))
 
     total = query.count()
-    places = query.offset(offset).limit(limit).all()
+    results = query.offset(offset).limit(limit).all()
 
-    for place in places:
-        dist_query = db.query(ST_Distance(func.cast(Place.location, Geography), user_point)).filter(Place.id == place.id)
-        place.distance = db.scalar(dist_query)
-        _attach_coords(db, place)
+    places = []
+    for place, distance, wkt_location in results:
+        place.distance = distance
+        if wkt_location:
+            coords = wkt_location.replace("POINT(", "").replace(")", "").split()
+            place.lng = float(coords[0])
+            place.lat = float(coords[1])
+        else:
+            place.lat = 0.0
+            place.lng = 0.0
+        places.append(place)
 
     return {"total": total, "items": places}
 
@@ -73,7 +84,11 @@ def get_place_by_id(db: Session, place_id: str) -> Place:
 
 def search_places(db: Session, q: str, lat: float, lng: float, limit: int = 20) -> dict:
     user_point = _user_point(lng, lat)
-    query = db.query(Place).filter(
+    query = db.query(
+        Place,
+        ST_Distance(func.cast(Place.location, Geography), user_point).label("distance"),
+        func.ST_AsText(Place.location).label("wkt_location")
+    ).filter(
         Place.is_active == True,
         or_(
             Place.name.ilike(f"%{q}%"),
@@ -82,11 +97,19 @@ def search_places(db: Session, q: str, lat: float, lng: float, limit: int = 20) 
     ).order_by(ST_Distance(func.cast(Place.location, Geography), user_point))
 
     total = query.count()
-    places = query.limit(limit).all()
-    for place in places:
-        dist_query = db.query(ST_Distance(func.cast(Place.location, Geography), user_point)).filter(Place.id == place.id)
-        place.distance = db.scalar(dist_query)
-        _attach_coords(db, place)
+    results = query.limit(limit).all()
+    
+    places = []
+    for place, distance, wkt_location in results:
+        place.distance = distance
+        if wkt_location:
+            coords = wkt_location.replace("POINT(", "").replace(")", "").split()
+            place.lng = float(coords[0])
+            place.lat = float(coords[1])
+        else:
+            place.lat = 0.0
+            place.lng = 0.0
+        places.append(place)
 
     return {"total": total, "items": places}
 

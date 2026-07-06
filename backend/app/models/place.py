@@ -31,7 +31,7 @@ class Place(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
-    category = Column(SAEnum(PlaceCategory), nullable=False)
+    category = Column(SAEnum(PlaceCategory), nullable=False, index=True)
     location = Column(
         Geography(geometry_type="POINT", srid=4326), nullable=False, index=True
     )
@@ -39,7 +39,7 @@ class Place(Base):
     phone = Column(String(20), nullable=True)
     reported_hours = Column(String(100), nullable=True)
 
-    status = Column(SAEnum(PlaceStatus), default=PlaceStatus.unknown)
+    status = Column(SAEnum(PlaceStatus), default=PlaceStatus.unknown, index=True)
     status_updated_at = Column(DateTime(timezone=True), nullable=True)
     last_verified_by_id = Column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True

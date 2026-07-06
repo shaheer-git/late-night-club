@@ -163,6 +163,11 @@ export default function ProfileScreen() {
           >
             <Text style={styles.btnLimeText}>Sign Out</Text>
           </TouchableOpacity>
+
+          {/* Footer */}
+          <View style={styles.footerWrap}>
+            <Text style={styles.footerText}>Built with ❤️ by Fyrehub</Text>
+          </View>
         </ScrollView>
       </SafeAreaView>
 
@@ -387,5 +392,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     fontSize: 18,
     color: '#FFFFFF',
+  },
+
+  // ── Footer ──
+  footerWrap: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  footerText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 0.5,
   },
 });
