@@ -29,7 +29,7 @@ async function startGateway() {
             backupSyncIntervalMs: 300000 // Backup session every 5 minutes
         }),
         puppeteer: {
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/opt/google/chrome/chrome',
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox',
