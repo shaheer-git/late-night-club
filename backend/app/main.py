@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 from .utils.limiter import limiter
 from .routers import (
     auth_router, places_router, verifications_router,
-    users_router, cities_router, media_router,
+    users_router, cities_router, media_router, admin_router
 )
 from .config import settings
 
@@ -34,6 +34,7 @@ app.include_router(verifications_router)
 app.include_router(users_router)
 app.include_router(cities_router)
 app.include_router(media_router)
+app.include_router(admin_router)
 
 
 @app.get("/health")

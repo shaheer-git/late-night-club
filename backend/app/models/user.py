@@ -12,6 +12,7 @@ class User(Base):
     name = Column(String(100), nullable=False)
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
+    role = Column(String(50), default="user")
     avatar_url = Column(String(500), nullable=True)
     fcm_token = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
