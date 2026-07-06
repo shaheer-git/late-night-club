@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { Client, RemoteAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
@@ -15,18 +16,16 @@ async function startGateway() {
         process.exit(1);
     }
     
-    console.log('Connecting to PostgreSQL for RemoteAuth...');
-    const pgClient = new PgClient({ connectionString: dbUrl });
-    await pgClient.connect();
-    console.log('✅ Connected to PostgreSQL!');
-    
     // wwebjs-postgres will automatically manage the session table
-    const store = new PostgresStore({ client: pgClient });
+    const store = new PostgresStore({ 
+        connectionConfig: { connectionString: dbUrl }
+    });
     
     console.log('Initializing WhatsApp Client...');
     const client = new Client({
         authStrategy: new RemoteAuth({
             store: store,
+            dataPath: './',
             backupSyncIntervalMs: 300000 // Backup session every 5 minutes
         }),
         puppeteer: {
