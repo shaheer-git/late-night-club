@@ -168,6 +168,15 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', engine: 'baileys' });
 });
 
+// Ping endpoint to keep server alive
+app.get('/isAlive', (req, res) => {
+    res.status(200).json({ status: 'alive' });
+});
+
+app.head('/isAlive', (req, res) => {
+    res.status(200).end();
+});
+
 startSock();
 
 const PORT = process.env.PORT || 3001;
