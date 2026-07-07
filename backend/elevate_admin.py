@@ -9,23 +9,14 @@ def elevate():
         email = "developer.fyrehub@gmail.com"
         user = db.query(User).filter(User.email == email).first()
         if user:
+            # Force reset password and active status because manual copy broke the hash
+            user.hashed_password = hash_password("Admin@123")
+            user.is_active = True
             user.role = "admin"
             db.commit()
-            print(f"Successfully elevated existing user {email} to admin")
+            print(f"Successfully fixed existing user {email}. Password forced to Admin@123, role=admin")
         else:
-            # Create the user
-            hashed = hash_password("Admin@123")
-            user = User(
-                name="Admin",
-                email=email,
-                hashed_password=hashed,
-                role="admin",
-                is_verified=True,
-                is_active=True
-            )
-            db.add(user)
-            db.commit()
-            print(f"Successfully created admin user {email} with password Admin@123")
+            print("User not found in Supabase! You must create them.")
     finally:
         db.close()
 
