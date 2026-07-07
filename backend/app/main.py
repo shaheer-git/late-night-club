@@ -42,5 +42,6 @@ def health():
     return {"status": "ok", "env": settings.ENVIRONMENT}
 
 @app.get("/isAlive")
+@app.head("/isAlive")
 def is_alive():
     return {"status": "alive"}
