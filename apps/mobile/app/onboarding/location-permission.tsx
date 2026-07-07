@@ -24,10 +24,14 @@ export default function LocationPermissionScreen() {
     const { status } = await Location.requestForegroundPermissionsAsync();
     setPermission(status === 'granted');
     if (status === 'granted') {
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setLocation(loc.coords.latitude, loc.coords.longitude);
+      try {
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        setLocation(loc.coords.latitude, loc.coords.longitude);
+      } catch (err) {
+        console.warn("Location fetch failed:", err);
+      }
     }
     // If denied, location store keeps city coords set during city-select — fallback to map
     setAllSet(true);

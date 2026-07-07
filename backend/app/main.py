@@ -40,3 +40,7 @@ app.include_router(admin_router)
 @app.get("/health")
 def health():
     return {"status": "ok", "env": settings.ENVIRONMENT}
+
+@app.get("/isAlive")
+def is_alive():
+    return {"status": "alive"}

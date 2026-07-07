@@ -10,8 +10,12 @@ export function useLocation() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       setPermission(status === 'granted');
       if (status !== 'granted') return;
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setLocation(loc.coords.latitude, loc.coords.longitude);
+      try {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setLocation(loc.coords.latitude, loc.coords.longitude);
+      } catch (err) {
+        console.warn("Failed to get current position:", err);
+      }
     })();
   }, []);
 

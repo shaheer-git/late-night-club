@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Linking,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -22,6 +23,20 @@ export default function GeneralSettingsScreen() {
   
   // Trigger location permission request and get current coords
   useLocation();
+
+  const safeOpenURL = async (url: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert("Error", "Cannot open this link on your device.");
+      }
+    } catch (err) {
+      console.error("Failed to open URL:", err);
+      Alert.alert("Error", "Failed to open link.");
+    }
+  };
 
   // Show warning if permission was granted but no city is set
   const showLocationWarning =
@@ -125,7 +140,7 @@ export default function GeneralSettingsScreen() {
             {/* Privacy policy */}
             <TouchableOpacity
               style={styles.row}
-              onPress={() => Linking.openURL('https://legal-privacy.fyrehub.in/')}
+              onPress={() => safeOpenURL('https://legal-privacy.fyrehub.in/')}
               activeOpacity={0.7}
             >
               <View style={styles.rowLeft}>
@@ -142,7 +157,7 @@ export default function GeneralSettingsScreen() {
             {/* Terms of use */}
             <TouchableOpacity
               style={styles.row}
-              onPress={() => Linking.openURL('https://legal-terms.fyrehub.in/')}
+              onPress={() => safeOpenURL('https://legal-terms.fyrehub.in/')}
               activeOpacity={0.7}
             >
               <View style={styles.rowLeft}>
